@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getWeatherData, getHourlyForecast, HourlyForecastItem } from "../../services/weatherServices";
 import svgPaths from "../../imports/svg-hw15znepw5";
 import imgImage21 from "./assets/bc8749ec86bfed7e8616d13f584015e6e9d698f8.png";
 import imgImage23 from "./assets/9fefa5beabcf1318e4aaeed496cc3cf2df8aed22.png";
@@ -18,6 +19,19 @@ import img3DRenderWeatherIconsSetSunShiningClouds2151 from "./assets/9b04625cceb
 import imgTempLow from "./assets/8a3e163177512278267a9a78130f02a5e2a9d2bd.png";
 import imgGreenBycle from "./assets/f58c7f9d20a128c4b0c21b92ad8c999b78d5c56b.png";
 import { imgImage20, imgImage22, imgTick } from "../../imports/svg-by301";
+
+// Extended WeatherData interface to cover all fields we use
+interface WeatherData {
+  main: {
+    temp: number;
+    humidity: number;
+    feels_like: number;
+  };
+  weather: Array<{ description: string; icon: string; main: string }>;
+  wind: { speed: number; deg: number };
+  rain?: { "1h"?: number };
+  name: string;
+}
 
 function Group() {
   return (
@@ -148,19 +162,36 @@ function HourlyForecast({ unit }: { unit: 'C' | 'F' }) {
   );
 }
 
-function HazardWarning() {
+function HazardWarning({ windSpeed }: { windSpeed: number }) {
+  // Show warning if wind speed > 10 m/s (~36 km/h, considered gusty)
+  const isGusty = windSpeed > 36;
+  
   return (
     <div className="absolute contents left-[75px] top-[589px]" data-name="Hazard Warning">
       <div className="absolute bg-[#ffbe54] h-[36px] left-[75px] rounded-[8px] top-[589px] w-[251px]" />
       <div className="absolute left-[81px] size-[28px] top-[593px]" data-name="image 6">
         <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgImage6} />
       </div>
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[112px] not-italic text-[11px] text-black top-[600px] whitespace-nowrap">Gusty winds expected around 9:15 AM</p>
+      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[112px] not-italic text-[11px] text-black top-[600px] whitespace-nowrap">
+        {isGusty ? `Strong winds: ${Math.round(windSpeed)} km/h` : "Gusty winds expected around 9:15 AM"} 
+      </p>
     </div>
   );
 }
 
-function ClothingRecommendations() {
+function ClothingRecommendations({ tempC }: { tempC: number }) {
+  // Derive clothing suggestions from temperature
+  const items: string[] = [];
+  if (tempC < 5) {
+    items.push("Heavy Winter Jacket", "Thermal layers", "Warm gloves");
+  } else if (tempC < 12) {
+    items.push("Waterproof Jacket", "Light gloves", "Standard layers");
+  } else if (tempC < 18) {
+    items.push("Light Jacket", "Base layer", "Cycling tights");
+  } else {
+    items.push("Jersey", "Shorts", "Sun protection");
+  }
+
   return (
     <div className="absolute contents left-[31px] top-[655px]" data-name="Clothing Recommendations">
       <div className="absolute bg-white h-[153px] left-[31px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[655px] w-[340px]" />
@@ -171,23 +202,18 @@ function ClothingRecommendations() {
         </div>
       </div>
       <ul className="absolute block font-['Inter:Regular',sans-serif] font-normal h-[56px] leading-[0] left-[163px] list-disc not-italic text-[15px] text-black top-[713px] w-[159px]">
-        <li className="mb-0 ms-[22.5px]">
-          <span className="leading-[normal]">Waterproof Jacket</span>
-        </li>
-        <li className="mb-0 ms-[22.5px]">
-          <span className="leading-[normal]">Light gloves</span>
-        </li>
-        <li className="ms-[22.5px]">
-          <span className="leading-[normal]">Standard layers</span>
-        </li>
+        {items.map((item, i) => (
+          <li key={i} className="mb-0 ms-[22.5px]">
+            <span className="leading-[normal]">{item}</span>
+          </li>
+        ))}
       </ul>
     </div>
   );
 }
 
-function TempInfo({ unit }: { unit: 'C' | 'F' }) {
-  const celsius = 9;
-  const temp = unit === 'C' ? celsius : Math.round(celsius * 9/5 + 32);
+function TempInfo({ unit, tempC }: { unit: 'C' | 'F'; tempC: number }) {
+  const temp = unit === 'C' ? Math.round(tempC) : Math.round(tempC * 9/5 + 32);
   
   return (
     <div className="absolute contents left-[23px] top-[467px]" data-name="Temp info">
@@ -198,35 +224,45 @@ function TempInfo({ unit }: { unit: 'C' | 'F' }) {
   );
 }
 
-function RainInfo() {
+function RainInfo({ rainMm }: { rainMm: number }) {
+  const rainPercent = Math.min(100, Math.round(rainMm * 100));
+  const label = rainMm > 0 ? `${rainPercent}% chance` : "No rain";
+
   return (
     <div className="absolute contents left-[23px] top-[366px]" data-name="Rain Info">
       <div className="absolute bg-white h-[85px] left-[23px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[366px] w-[173px]" />
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[87px] not-italic text-[24px] text-black top-[390px] whitespace-nowrap">Rain</p>
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[88px] not-italic text-[13px] text-black top-[419px] whitespace-nowrap">20% (8-10 AM)</p>
+      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[88px] not-italic text-[13px] text-black top-[419px] whitespace-nowrap">{label}</p>
     </div>
   );
 }
 
-function WindInfo() {
+function WindInfo({ windSpeedMs }: { windSpeedMs: number }) {
+  const kmh = Math.round(windSpeedMs);
+  const level = kmh < 20 ? "Light" : kmh < 40 ? "Moderate" : "Strong";
+
   return (
     <div className="absolute contents left-[206px] top-[366px]" data-name="Wind info">
       <div className="absolute bg-white h-[85px] left-[206px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[366px] w-[173px]" />
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[274px] not-italic text-[24px] text-black top-[390px] whitespace-nowrap">Wind</p>
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[0] left-[274px] not-italic text-[0px] text-black top-[419px] whitespace-nowrap">
-        <span className="leading-[normal] text-[13px]">{`15 km/h `}</span>
-        <span className="leading-[normal] text-[10px]">Moderate</span>
+        <span className="leading-[normal] text-[13px]">{`${kmh} km/h `}</span>
+        <span className="leading-[normal] text-[10px]">{level}</span>
       </p>
     </div>
   );
 }
 
-function RoadsInfo() {
+function RoadsInfo({ tempC }: { tempC: number }) {
+  const iceRisk = tempC <= 2;
+
   return (
     <div className="absolute contents left-[206px] top-[467px]" data-name="Roads info">
       <div className="absolute bg-white h-[85px] left-[206px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[467px] w-[173px]" />
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[274px] not-italic text-[24px] text-black top-[485px] whitespace-nowrap">Roads</p>
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[274px] not-italic text-[13px] text-black top-[512px] whitespace-nowrap">No Ice Risk</p>
+      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[274px] not-italic text-[13px] text-black top-[512px] whitespace-nowrap">
+        {iceRisk ? "Ice Risk!" : "No Ice Risk"}
+      </p>
     </div>
   );
 }
@@ -273,13 +309,19 @@ function MaskGroup7() {
   );
 }
 
-function SuitabilityScore() {
+function SuitabilityScore({ score, label }: { score: number; label: string }) {
+  const color = score >= 70 ? "#1ba100" : score >= 40 ? "#e08800" : "#cc0000";
+  const bgColor = score >= 70 ? "rgba(0, 255, 0, 0.2)" : score >= 40 ? "rgba(255, 200, 0, 0.2)" : "rgba(255, 0, 0, 0.2)";
+
   return (
     <div className="absolute contents left-[17px] top-[141px]" data-name="Suitability Score">
-      <div className="absolute h-[193.907px] left-[17px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[141px] w-[367px]" style={{ backgroundImage: "linear-gradient(180.361deg, rgba(255, 255, 255, 0.2) 58.941%, rgba(0, 255, 77, 0.2) 77.619%, rgba(0, 255, 0, 0.2) 99.411%), linear-gradient(90deg, rgb(255, 255, 255) 0%, rgb(255, 255, 255) 100%)" }} />
+      <div
+        className="absolute h-[193.907px] left-[17px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[141px] w-[367px]"
+        style={{ backgroundImage: `linear-gradient(180.361deg, rgba(255, 255, 255, 0.2) 58.941%, ${bgColor} 77.619%, ${bgColor} 99.411%), linear-gradient(90deg, rgb(255, 255, 255) 0%, rgb(255, 255, 255) 100%)` }}
+      />
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[17px] leading-[normal] left-[142px] not-italic text-[14px] text-black top-[169px] w-[140px]">Cycling Conditions</p>
-      <p className="absolute font-['Inter:Bold',sans-serif] font-bold h-[52.585px] leading-[normal] left-[146.27px] not-italic text-[#1ba100] text-[40px] top-[213.3px] w-[109.552px]">SAFE</p>
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[31.77px] leading-[normal] left-[157px] not-italic text-[#009427] text-[24px] top-[269px] w-[87.642px]">85/100</p>
+      <p className="absolute font-['Inter:Bold',sans-serif] font-bold h-[52.585px] leading-[normal] left-[146.27px] not-italic text-[40px] top-[213.3px] w-[109.552px]" style={{ color }}>{label}</p>
+      <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[31.77px] leading-[normal] left-[157px] not-italic text-[24px] top-[269px] w-[87.642px]" style={{ color }}>{score}/100</p>
       <div className="absolute left-[82px] size-[56px] top-[150px]" data-name="image 15">
         <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgImage15} />
       </div>
@@ -357,39 +399,96 @@ function TempLow1({ className }: { className?: string }) {
   );
 }
 
+// Derive a cycling suitability score from weather data
+function getCyclingScore(weather: WeatherData): { score: number; label: string } {
+  let score = 100;
+  const windKmh = weather.wind.speed * 3.6;
+  const temp = weather.main.temp;
+  const rain = weather.rain?.["1h"] ?? 0;
+
+  if (windKmh > 50) score -= 40;
+  else if (windKmh > 30) score -= 20;
+  else if (windKmh > 20) score -= 10;
+
+  if (temp < 0) score -= 30;
+  else if (temp < 5) score -= 15;
+  else if (temp > 35) score -= 20;
+
+  if (rain > 5) score -= 30;
+  else if (rain > 1) score -= 15;
+  else if (rain > 0) score -= 5;
+
+  score = Math.max(0, score);
+
+  const label = score >= 70 ? "SAFE" : score >= 40 ? "CAUTION" : "UNSAFE";
+  return { score, label };
+}
+
 export default function WeatherDetails() {
   const { city } = useParams<{ city: string }>();
   const navigate = useNavigate();
+  const [unit, setUnit] = useState<'C' | 'F'>('C');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!city) {
-    navigate("/");
-    return null;
+  useEffect(() => {
+    if (!city) {
+      navigate("/");
+      return;
+    }
+    getWeatherData(decodeURIComponent(city))
+      .then((data) => {
+        setWeather(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [city]);
+
+  if (!city) return null;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f3f3f3]">
+        <p className="text-gray-500 text-lg">Loading weather...</p>
+      </div>
+    );
   }
 
-  const displayCity = decodeURIComponent(city)
+  if (error || !weather) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f3f3f3] gap-4">
+        <p className="text-red-500 text-lg">{error ?? "Something went wrong."}</p>
+        <button onClick={() => navigate("/")} className="text-blue-600 underline">Go back</button>
+      </div>
+    );
+  }
+
+  const displayCity = weather.name || decodeURIComponent(city)
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
-  const [unit, setUnit] = useState<'C' | 'F'>('C');
-
-  const toggleUnit = () => {
-    setUnit(unit === 'C' ? 'F' : 'C');
-  };
+  const toggleUnit = () => setUnit(unit === 'C' ? 'F' : 'C');
+  const { score, label } = getCyclingScore(weather);
+  const rainMm = weather.rain?.["1h"] ?? 0;
 
   return (
     <div className="bg-[#f3f3f3] relative size-full overflow-x-hidden overflow-y-auto" data-name="iPhone 17 - 1">
       <div className="relative min-h-[1200px] w-full max-w-[420px] mx-auto bg-white overflow-hidden">
         <HourlyForecast unit={unit} />
         <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[20px] leading-[normal] left-[48px] not-italic text-[14px] text-black top-[1026px] w-[141px]">Hourly Forecast</p>
-        <HazardWarning />
-        <ClothingRecommendations />
-        <TempInfo unit={unit} />
-        <RainInfo />
-        <WindInfo />
-        <RoadsInfo />
+        <HazardWarning windSpeed={weather.wind.speed} />
+        <ClothingRecommendations tempC={weather.main.temp} />
+        <TempInfo unit={unit} tempC={weather.main.temp} />
+        <RainInfo rainMm={rainMm} />
+        <WindInfo windSpeedMs={weather.wind.speed} />
+        <RoadsInfo tempC={weather.main.temp} />
         <Location city={displayCity} unit={unit} onToggleUnit={toggleUnit} />
-        <SuitabilityScore />
+        <SuitabilityScore score={score} label={label} />
         <CommuteTimes />
         <div className="absolute left-[27px] size-[60px] top-[375px]" data-name="3d-render-weather-icons-set-sun-shining-clouds 2 (6) 1">
           <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={img3DRenderWeatherIconsSetSunShiningClouds261} />
