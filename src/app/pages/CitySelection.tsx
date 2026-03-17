@@ -1,8 +1,8 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { Search, MapPin, Cloud } from "lucide-react";
-import imgImage22 from "figma:asset/01c46dafbcb4e6239b234bcb42b1b4c0ee010652.png";
-import imgImage25 from "figma:asset/675ccc47da7011520feb6ac194cf5d3b711440a0.png";
+import imgImage22 from "./assets/01c46dafbcb4e6239b234bcb42b1b4c0ee010652.png";
+import imgImage25 from "./assets/675ccc47da7011520feb6ac194cf5d3b711440a0.png";
 
 export default function CitySelection() {
   const [searchQuery, setSearchQuery] = useState("");
