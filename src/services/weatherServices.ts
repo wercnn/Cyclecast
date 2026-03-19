@@ -1,4 +1,4 @@
-const API_KEY = "b1195828baf052a3a32ecf44acf44348";
+const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
 const BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
 const HOURLY_URL = "https://pro.openweathermap.org/data/2.5/forecast/hourly";
 
