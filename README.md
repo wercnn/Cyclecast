@@ -6,6 +6,7 @@
   ## Weather Icons 
   Weather Icons uses the same icon naming style that OpenWeather uses 01d.png 01n.png etc. 
   https://openweathermap.org/weather-conditions#Icon-list
+  https://www.freepik.com/free-photo/3d-render-weather-icons-set-sun-shining-clouds_35583427.htm
 
   ## Running the code
 
