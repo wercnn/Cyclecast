@@ -183,9 +183,9 @@ function HourlyForecast({
                 {formatLocalHour(item.dt, tzOffset)}
               </p>
               <img
-                src={`https://openweathermap.org/img/wn/${item.weather[0].icon}.png`}
+                src={`/weather-icons/${item.weather[0].icon}.png`}
                 alt={item.weather[0].main}
-                className="size-[28px]"
+                 className="size-[28px] weather-icon"
               />
               <p className="font-['Inter:Regular',sans-serif] text-[13px] text-black leading-normal">
                 {toDisplay(item.main.temp, unit)}°
@@ -497,9 +497,9 @@ function CommuteTimes({
       </p>
       {best[0] && (
         <img
-          src={`https://openweathermap.org/img/wn/${best[0].icon}.png`}
+          src={`/weather-icons/${best[0].icon}.png`}
           alt="weather icon"
-          className="absolute left-[303px] top-[874px] size-[44px]"
+          className="absolute left-[303px] top-[874px] size-[44px] weather-icon"
         />
       )}
 
@@ -526,9 +526,9 @@ function CommuteTimes({
       </p>
       {best[1] && (
         <img
-          src={`https://openweathermap.org/img/wn/${best[1].icon}.png`}
+          src={`/weather-icons/${best[1].icon}.png`}
           alt="weather icon"
-          className="absolute left-[303px] top-[925px] size-[44px]"
+          className="absolute left-[303px] top-[925px] size-[44px] weather-icon"
         />
       )}
     </div>
