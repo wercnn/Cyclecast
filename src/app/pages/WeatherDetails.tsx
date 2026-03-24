@@ -389,7 +389,7 @@ function Location({
       </button>
       <button
         onClick={onToggleUnit}
-        className="absolute left-[366px] size-[25px] top-[58px] flex items-center justify-center bg-black text-white rounded-full font-['Inter:Bold',sans-serif] font-bold text-[12px] hover:bg-gray-800 transition-colors"
+        className="absolute left-[366px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full font-['Inter:Bold',sans-serif] font-bold text-[12px] hover:bg-gray-800 transition-colors"
       >
         °{unit}
       </button>
