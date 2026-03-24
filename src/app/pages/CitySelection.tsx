@@ -2,8 +2,6 @@ import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { Search, MapPin, Cloud } from "lucide-react";
 import imgImage22 from "./assets/01c46dafbcb4e6239b234bcb42b1b4c0ee010652.png";
-import imgImage25 from "./assets/675ccc47da7011520feb6ac194cf5d3b711440a0.png";
-
 export default function CitySelection() {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
@@ -72,11 +70,6 @@ export default function CitySelection() {
               className="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-['Inter:Medium',sans-serif] font-medium text-lg rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <span>Get Weather Forecast</span>
-              <img 
-                alt="Search" 
-                className="size-5 brightness-0 invert" 
-                src={imgImage25} 
-              />
             </button>
           </form>
 
