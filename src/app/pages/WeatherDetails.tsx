@@ -15,7 +15,6 @@ import svgPaths from "../../imports/svg-hw15znepw5";
 import imgImage13 from "./assets/e5ac59210cdbb29fa9c15cba66918e93793cebbc.png";
 import imgImage11 from "./assets/8a534b23ffc71d15108235d8a88771d778fadec9.png";
 import imgImage15 from "./assets/686df2101d42f56c6b48dbb77f2f421b384d2c43.png";
-import imgTick1 from "./assets/1a74f8c655f4959ec564a48f9a1cdb3d0fe4a696.png";
 import imgImage14 from "./assets/f51d5fcfda4ed4003bc820499a94e98d1d4f22de.png";
 import imgImage6 from "./assets/877ace712fc7f1a2033ef33f8cfdb72008f64b9e.png";
 import img3DRenderWeatherIconsSetSunShiningClouds261 from "./assets/05847c1d65e4c4cc4033202b0db79c191f71fd0d.png";
@@ -80,13 +79,63 @@ function slotScore(tempC: number, windMs: number, rainMm: number): number {
   return Math.max(0, score);
 }
 
-function getCyclingScore(
-  weather: WeatherData
-): { score: number; label: string } {
-  const rain = weather.rain?.["1h"] ?? 0;
-  const score = slotScore(weather.main.temp, weather.wind.speed, rain);
-  const label =
-    score >= 70 ? "SAFE" : score >= 40 ? "CAUTION" : "UNSAFE";
+function getCyclingScore(weather: WeatherData): { score: number; label: string } {
+  let score = 100;
+
+  // ── Temperature ──
+  // Casual commuters: below 5°C is unsafe, comfort-focused bell curve
+ // ── Temperature ──
+  const t = weather.main.temp;
+  if (t >= 15 && t <= 25)        score -= 0;
+  else if (t >= 10 && t < 15)    score -= 5;
+  else if (t > 25 && t <= 30)    score -= 5;
+  else if (t > 30 && t <= 35)    score -= 20;
+  else if (t > 35)               score -= 40;
+  else if (t >= 5 && t < 10)     score -= 20;
+  else if (t >= 0 && t < 5)      score -= 42;  // unsafe threshold
+  else if (t >= -10 && t < 0)    score -= 60;  // freezing — UNSAFE
+  else if (t >= -20 && t < -10)  score -= 75;  // extreme cold
+  else if (t < -20)              score -= 90;  // life-threatening cold
+  // ── Wind ──
+  // Casual riders: 30km/h+ = CAUTION, stacks heavily with rain
+  const kmh = msToKmh(weather.wind.speed);
+  if (kmh <= 15)        score -= 0;   // barely noticeable
+  else if (kmh <= 22)   score -= 6;   // light breeze, fine
+  else if (kmh <= 30)   score -= 14;  // noticeable, manageable
+  else if (kmh <= 40)   score -= 28;  // CAUTION territory for casual riders
+  else if (kmh <= 50)   score -= 40;  // hard, tiring, hazardous
+  else if (kmh <= 60)   score -= 52;  // dangerous
+  else                  score -= 65;  // extreme, do not ride
+
+  // ── Rain (moderate policy: light drizzle acceptable, degrades from there) ──
+  const rain = weather.rain?.["1h"] ?? weather.rain?.["3h"] ?? 0;
+  if (rain <= 0.3)        score -= 0;   // dry or negligible drizzle — acceptable
+  else if (rain <= 1)     score -= 8;   // light drizzle, commuters can handle
+  else if (rain <= 2.5)   score -= 20;  // light rain, uncomfortable
+  else if (rain <= 5)     score -= 35;  // moderate rain, unsafe for most commuters
+  else if (rain <= 8)     score -= 48;  // heavy rain
+  else                    score -= 58;  // very heavy, do not ride
+
+  // ── Wind + Rain combo penalty (casual riders suffer most from both together) ──
+  if (kmh > 25 && rain > 1) score -= 10; // wet + windy is disproportionately bad
+
+  // ── Weather condition codes ──
+  const id = weather.weather?.[0]?.id ?? 800;
+  if (id < 300)         score -= 55;  // thunderstorm — never ride
+  else if (id < 400)    score -= 10;  // drizzle codes (light, already captured by rain)
+  else if (id < 600)    score -= 18;  // rain condition codes
+  else if (id < 700)    score -= 40;  // snow/sleet — unsafe for casual riders
+  else if (id === 741)  score -= 22;  // fog — visibility danger for commuters
+  else if (id === 721)  score -= 10;  // haze
+  else if (id === 781)  score -= 90;  // tornado
+
+  // ── Humidity (comfort factor — matters for casual commuters in heat) ──
+  const hum = weather.main.humidity;
+  if (hum > 90 && t > 20)       score -= 12; // oppressive humidity
+  else if (hum > 80 && t > 26)  score -= 7;  // warm + humid, tiring
+
+  score = Math.max(0, Math.min(100, score));
+  const label = score >= 70 ? "SAFE" : score >= 40 ? "CAUTION" : "UNSAFE";
   return { score, label };
 }
 
@@ -405,54 +454,45 @@ function MaskGroup7() {
         style={{ maskImage: `url('${imgTick}')` }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <img
-            alt=""
-            className="absolute h-[129%] left-[-10.71%] max-w-none top-[-14.5%] w-[120.71%]"
-            src={imgTick1}
-          />
+          
         </div>
       </div>
     </div>
   );
 }
 
-function SuitabilityScore({
-  score,
-  label,
-}: {
-  score: number;
-  label: string;
-}) {
+function SuitabilityScore({ score, label }: { score: number; label: string }) {
   const color =
     score >= 70 ? "#1ba100" : score >= 40 ? "#e08800" : "#cc0000";
   const bgColor =
     score >= 70
-      ? "rgba(0, 255, 0, 0.2)"
+      ? "rgba(0, 200, 0, 0.25)"
       : score >= 40
-      ? "rgba(255, 200, 0, 0.2)"
-      : "rgba(255, 0, 0, 0.2)";
+      ? "rgba(255, 180, 0, 0.25)"
+      : "rgba(220, 0, 0, 0.25)";
+
   return (
     <div className="absolute contents left-[17px] top-[141px]" data-name="Suitability Score">
       <div
         className="absolute h-[193.907px] left-[17px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[141px] w-[367px]"
         style={{
-          backgroundImage: `linear-gradient(180.361deg, rgba(255, 255, 255, 0.2) 58.941%, ${bgColor} 77.619%, ${bgColor} 99.411%), linear-gradient(90deg, rgb(255, 255, 255) 0%, rgb(255, 255, 255) 100%)`,
+          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.2) 50%, ${bgColor} 100%), linear-gradient(90deg, #fff 0%, #fff 100%)`,
         }}
       />
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[17px] leading-[normal] left-[142px] not-italic text-[14px] text-black top-[169px] w-[140px]">
         Cycling Conditions
       </p>
       <p
-        className="absolute font-['Inter:Bold',sans-serif] font-bold h-[52.585px] leading-[normal] left-[146.27px] not-italic text-[40px] top-[213.3px] w-[109.552px]"
+        className="absolute font-['Inter:Bold',sans-serif] font-bold h-[52.585px] leading-[normal] not-italic text-[40px] top-[213.3px] w-[367px] left-[17px] text-center"
         style={{ color }}
       >
         {label}
       </p>
       <p
-        className="absolute font-['Inter:Regular',sans-serif] font-normal h-[31.77px] leading-[normal] left-[157px] not-italic text-[24px] top-[269px] w-[87.642px]"
+        className="absolute font-['Inter:Regular',sans-serif] font-normal h-[31.77px] leading-[normal] not-italic text-[24px] top-[269px] w-[367px] left-[17px] text-center"
         style={{ color }}
       >
-        {score}/100
+        {score}%
       </p>
       <div className="absolute left-[82px] size-[56px] top-[150px]">
         <img
