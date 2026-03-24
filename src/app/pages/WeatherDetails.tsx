@@ -146,56 +146,63 @@ function HourlyForecast({
   const slots = days[selectedDay]?.slots ?? [];
 
   return (
-    <div
-      className="absolute bg-white left-[30px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[1007px] w-[341px]"
-      data-name="Hourly forecast"
-    >
-      {/* Day selector tabs */}
-      <div className="flex gap-1 px-3 pt-3 pb-1">
-        {days.map((day, i) => (
-          <button
-            key={i}
-            onClick={() => setSelectedDay(i)}
-            className={`flex-1 py-1 rounded-[6px] font-['Inter:Regular',sans-serif] text-[11px] transition-colors ${
-              selectedDay === i
-                ? "bg-black text-white"
-                : "bg-[#eee] text-gray-600"
-            }`}
-          >
-            {day.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Hourly slots in city local time */}
-      <div className="flex gap-2 px-3 py-3 overflow-x-auto">
-        {slots.length === 0 ? (
-          <p className="font-['Inter:Regular',sans-serif] text-[13px] text-gray-400 py-2 px-1">
-            No data available
-          </p>
-        ) : (
-          slots.map((item) => (
-            <div
-              key={item.dt}
-              className="flex flex-col items-center justify-between bg-[#eee] opacity-65 rounded-[8px] shrink-0 w-[60px] h-[87px] pt-2 pb-2"
-            >
-              <p className="font-['Inter:Regular',sans-serif] text-[13px] text-black leading-normal">
-                {formatLocalHour(item.dt, tzOffset)}
-              </p>
-              <img
-                src={`/weather-icons/${item.weather[0].icon}.png`}
-                alt={item.weather[0].main}
-                 className="size-[28px] weather-icon"
-              />
-              <p className="font-['Inter:Regular',sans-serif] text-[13px] text-black leading-normal">
-                {toDisplay(item.main.temp, unit)}°
-              </p>
-            </div>
-          ))
-        )}
-      </div>
+  <div
+    className="absolute bg-white left-[30px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[1005px] w-[341px] h-[170px] overflow-hidden"
+    data-name="Hourly Forecast"
+  >
+    {/* Title INSIDE the box */}
+    <div className="px-3 pt-2 text-[14px] font-['Inter:Regular',sans-serif] text-black">
+      Hourly Forecast
     </div>
-  );
+
+    {/* Day selector tabs */}
+    <div className="flex gap-1 px-3 pt-2 pb-1">
+      {days.map((day, i) => (
+        <button
+          key={i}
+          onClick={() => setSelectedDay(i)}
+          className={`flex-1 py-[2px] rounded-[6px] text-[10px] transition-colors ${
+            selectedDay === i
+              ? "bg-black text-white"
+              : "bg-[#eee] text-gray-600"
+          }`}
+        >
+          {day.label}
+        </button>
+      ))}
+    </div>
+
+    {/* Hourly slots */}
+    <div className="flex gap-2 px-3 py-2 overflow-x-auto overflow-y-hidden h-[100px]">
+      {slots.length === 0 ? (
+        <p className="text-[13px] text-gray-400 py-2 px-1">
+          No data available
+        </p>
+      ) : (
+        slots.map((item) => (
+          <div
+            key={item.dt}
+            className="flex flex-col items-center justify-between bg-[#eee] opacity-65 rounded-[8px] shrink-0 w-[60px] h-[80px] pt-1 pb-1"
+          >
+            <p className="text-[12px] text-black">
+              {formatLocalHour(item.dt, tzOffset)}
+            </p>
+
+            <img
+              src={`/weather-icons/${item.weather[0].icon}.png`}
+              alt={item.weather[0].main}
+              className="size-[28px] weather-icon"
+            />
+
+            <p className="text-[12px] text-black">
+              {toDisplay(item.main.temp, unit)}°
+            </p>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+);
 }
 
 function HazardWarning({ windMs }: { windMs: number }) {
@@ -389,7 +396,7 @@ function Location({
       </button>
       <button
         onClick={onToggleUnit}
-        className="absolute left-[366px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full font-['Inter:Bold',sans-serif] font-bold text-[12px] hover:bg-gray-800 transition-colors"
+        className="absolute left-[366px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full font-['Inter:Bold',sans-serif] font-bold text-[12px] hover:bg-gray-800 hover:text-white transition-colors"
       >
         °{unit}
       </button>
@@ -634,9 +641,6 @@ export default function WeatherDetails() {
 
         {/* Hourly forecast — height is dynamic so label is placed just above it */}
         <HourlyForecast unit={unit} forecast={forecast} tzOffset={tzOffset} />
-        <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[20px] leading-[normal] left-[48px] not-italic text-[14px] text-black top-[985px] w-[141px]">
-          Hourly Forecast
-        </p>
 
         <HazardWarning windMs={weather.wind.speed} />
         <ClothingRecommendations
@@ -677,7 +681,7 @@ export default function WeatherDetails() {
           />
         </div>
         <TempLow1 />
-      </div>
-    </div>
+      </div> 
+    </div> 
   );
 }
