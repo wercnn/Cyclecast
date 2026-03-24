@@ -279,7 +279,7 @@ function HazardWarning({
   if (weatherId === 781) {
     alerts.push({
       severity: 'extreme',
-      message: 'Tornado warning: Seek shelter now.'
+      message: 'Tornado warning: Seek shelter.'
     });
   }
 
@@ -302,7 +302,7 @@ function HazardWarning({
   } else if (rainMm > 15) {
     alerts.push({
       severity: 'moderate',
-      message: 'Heavy rain: Rethink cycling or be very catious.'
+      message: 'Rain: Be catious.'
     });
   }
 
@@ -321,7 +321,7 @@ function HazardWarning({
       severity: weatherId >= 620 ? 'severe' : 'moderate',
       message: weatherId >= 620 
         ? 'Heavy snow: Avoid cycling' 
-        : 'Snow expected: Rethink cycling or be very catious.'
+        : 'Snow: Rethink cycling, be catious.'
     });
   }
 
@@ -329,25 +329,25 @@ function HazardWarning({
   if (weatherId === 741) {
     alerts.push({
       severity: 'moderate',
-      message: 'Dense fog warning: Rethink or avoid cycling. Use lights.'
+      message: 'Fog warning: Rethink cycling. Use lights.'
     });
   }
 
   // Check for strong winds (only dangerous levels, no "safe" message)
-  if (kmh > 70) {
+  if (kmh > 50) {
     alerts.push({
       severity: 'extreme',
-      message: `Extreme wind: ${kmh} km/h: Avoid cycling`
+      message: `Extreme wind: Avoid cycling`
     });
-  } else if (kmh > 50) {
+  } else if (kmh > 35) {
     alerts.push({
       severity: 'severe',
-      message: `Severe winds: ${kmh} km/h: Avoid cycling`
+      message: `Severe winds: Avoid cycling`
     });
-  } else if (kmh > 36) {
+  } else if (kmh > 25) {
     alerts.push({
       severity: 'moderate',
-      message: `Gusty winds: ${kmh} km/h:  Rethink or avoid cycling. Be Catious.`
+      message: `Gusty winds:  Rethink cycling, be catious.`
     });
   }
 
@@ -355,12 +355,12 @@ function HazardWarning({
   if (tempC < -10) {
     alerts.push({
       severity: 'extreme',
-      message: `Extreme cold: ${Math.round(tempC)}°C: Avoid cycling.`
+      message: `Extreme cold: Avoid cycling.`
     });
   } else if (tempC < 0) {
     alerts.push({
       severity: 'moderate',
-      message: `Freezing temperatures: ${Math.round(tempC)}°C: Icy roads possible. Check and be catious.`
+      message: `Icy roads possible: avoid cycling, be catious.`
     });
   }
 
@@ -368,7 +368,7 @@ function HazardWarning({
   if (tempC > 35) {
     alerts.push({
       severity: 'severe',
-      message: `Extreme heat: ${Math.round(tempC)}°C: Rethink cycling.`
+      message: `Extreme heat: Rethink cycling.`
     });
   }
 
@@ -379,7 +379,7 @@ function HazardWarning({
   if (alerts.length === 0) {
     // No warnings - show green with safe message
     bgColor = 'bg-[#4caf50]'; // Green
-    displayMessage = 'No weather hazard alerts.';
+    displayMessage = 'No emergency weather hazard alerts now.';
   } else {
     // Sort by severity and get the most critical alert
     const severityOrder = { extreme: 3, severe: 2, moderate: 1 };
@@ -391,15 +391,16 @@ function HazardWarning({
     
     bgColor = 
       primaryAlert.severity === 'extreme' ? 'bg-[#cc0000]' :
-      primaryAlert.severity === 'severe' ? 'bg-[#e08800]' :
-      'bg-[#ffbe54]';
+      primaryAlert.severity === 'severe' ? 'bg-[#cc0000]' :
+      primaryAlert.severity === 'moderate' ? 'bg-[#ff9900]' :
+      'bg-[#1a9e00]';
   }
 
   return (
     <div className="absolute contents left-[75px] top-[589px]" data-name="Hazard Warning">
-      <div className={`absolute ${bgColor} h-[36px] left-[75px] rounded-[8px] top-[589px] w-[251px]`} />
+     <div className={`absolute ${bgColor} h-[36px] left-[31px] rounded-[8px] top-[589px] w-[340px]`} />
        {alerts.length > 0 && (
-      <div className="absolute left-[81px] size-[28px] top-[593px]" data-name="image 6">
+     <div className="absolute left-[41px] size-[28px] top-[593px]" data-name="image 6">
         <img
           alt=""
           className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
@@ -407,7 +408,7 @@ function HazardWarning({
         />
       </div>
     )}
-    <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[112px] not-italic text-[11px] text-black top-[600px] whitespace-nowrap">
+   <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[77px] not-italic text-[11px] text-white top-[600px] whitespace-nowrap">
       {displayMessage}
     </p>
   </div>
@@ -419,31 +420,62 @@ function ClothingRecommendations({
   rainMm,
   windMs,
   pop,
+  weatherId,
 }: {
   tempC: number;
   rainMm: number;
   windMs: number;
   pop: number;
+  weatherId?: number;
 }) {
   const kmh = msToKmh(windMs);
   const items: string[] = [];
 
-  if (tempC < 5) items.push("Heavy insulated jacket");
+  // ── Temperature-based layers ──
+  if (tempC < -10) items.push("Insulated jacket, thermal layers");
+  else if (tempC < 0) items.push("Thick heavy jacket");
+  else if (tempC < 5) items.push("Thick jacket");
   else if (tempC < 12) items.push("Windproof jacket");
-  else if (tempC < 18) items.push("Light cycling jacket");
+  else if (tempC < 18) items.push("Light jacket");
+  else if (tempC > 35) items.push("Breathable jacket");
 
-  if (rainMm > 0 || pop >= 0.4) items.push("Waterproof overjacket");
+  // ── Rain protection ──
+  if (rainMm > 5 || pop >= 0.6) items.push("Waterproof jacket, pants");
+  else if (rainMm > 0 || pop >= 0.4) items.push("Waterproof jacket");
 
-  if (tempC < 5) items.push("Insulated gloves");
+  // ── Snow/ice gear ──
+  if (weatherId && weatherId >= 600 && weatherId <= 622) {
+    items.push("Spiked ice tires");
+  }
+
+  // ── Hand protection ──
+  if (tempC < -10) items.push("Insulated gloves");
+  else if (tempC < 0) items.push("Winter gloves");
+  else if (tempC < 5) items.push("Warm gloves");
   else if (tempC < 12) items.push("Light gloves");
 
-  if (tempC < 10) items.push("Thermal tights");
+  // ── Leg protection ──
+  if (tempC < 0) items.push("Thermal tights, leg warmers");
+  else if (tempC < 10) items.push("Thermal tights");
   else if (tempC < 16) items.push("Cycling tights");
 
-  if (kmh > 30 && tempC >= 12) items.push("Gilet / wind vest");
+  // ── Wind protection ──
+  if (kmh > 40) items.push("Wind jacket");
+  else if (kmh > 30 && tempC >= 12) items.push("Wind vest");
 
-  if (tempC >= 18 && items.length === 0) items.push("Jersey + shorts");
+  // ── Visibility/safety gear ──
+  if (weatherId === 741) items.push("Front, rear lights");
+  if (rainMm > 2) items.push("Rain jacket/vest");
 
+  // ── Heat protection ──
+  if (tempC > 30) items.push("Sunscreen, cap");
+
+  // ── Default for perfect weather ──
+  if (tempC >= 18 && tempC <= 30 && items.length === 0) {
+    items.push("Shirt, pants");
+  }
+
+  // Show top 3 most critical items
   const display = items.slice(0, 3);
 
   return (
@@ -656,7 +688,7 @@ function MaskGroup7() {
 
 function SuitabilityScore({ score, label }: { score: number; label: string }) {
   const color =
-    score >= 70 ? "#1ba100" : score >= 40 ? "#e08800" : "#cc0000";
+    score >= 70 ? "#1a9e00" : score >= 40 ? "#ff9900" : "#cc0000";
   const bgColor =
     score >= 70
       ? "rgba(0, 200, 0, 0.25)"
@@ -856,6 +888,7 @@ export default function WeatherDetails() {
             rainMm={rainMm}
             windMs={weather.wind.speed}
             pop={rainPop}
+            weatherId={weatherId}
           />
         <TempInfo unit={unit} tempC={weather.main.temp} />
         <WeatherCondition
