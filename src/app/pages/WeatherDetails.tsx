@@ -17,11 +17,14 @@ import imgImage11 from "./assets/8a534b23ffc71d15108235d8a88771d778fadec9.png";
 import imgImage15 from "./assets/686df2101d42f56c6b48dbb77f2f421b384d2c43.png";
 import imgImage14 from "./assets/f51d5fcfda4ed4003bc820499a94e98d1d4f22de.png";
 import imgImage6 from "./assets/877ace712fc7f1a2033ef33f8cfdb72008f64b9e.png";
-import img3DRenderWeatherIconsSetSunShiningClouds261 from "./assets/05847c1d65e4c4cc4033202b0db79c191f71fd0d.png";
-import img3DRenderWeatherIconsSetSunShiningClouds2151 from "./assets/9b04625cceb5b50bd060708fbb44e90a1e0edc49.png";
-import imgTempLow from "./assets/8a3e163177512278267a9a78130f02a5e2a9d2bd.png";
+import imgWindy from "./assets/9b04625cceb5b50bd060708fbb44e90a1e0edc49.png";
 import imgGreenBycle from "./assets/f58c7f9d20a128c4b0c21b92ad8c999b78d5c56b.png";
 import { imgImage22, imgTick } from "../../imports/svg-by301";
+
+import imgTempLow2 from "./assets/temp_low.png";
+import imgTempMid from "./assets/temp_mid.png";
+import imgTempHigh from "./assets/temp_high.png";
+import imgIcyRoad from "./assets/Icy_Road.png";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -471,9 +474,22 @@ function ClothingRecommendations({
 
 function TempInfo({ unit, tempC }: { unit: "C" | "F"; tempC: number }) {
   const temp = toDisplay(tempC, unit);
+
+  const tempIcon =
+    tempC >= 25 ? imgTempHigh :
+    tempC >= 10 ? imgTempMid :
+    imgTempLow2;
+
   return (
     <div className="absolute contents left-[23px] top-[467px]" data-name="Temp info">
       <div className="absolute bg-white h-[85px] left-[23px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[467px] w-[173px]" />
+      <div className="absolute h-[59px] left-[31px] top-[477px] w-[39px]">
+        <img
+          alt="Temperature"
+          className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
+          src={tempIcon}
+        />
+      </div>
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[83px] not-italic text-[24px] text-black top-[485px] whitespace-nowrap">
         Temp
       </p>
@@ -484,25 +500,51 @@ function TempInfo({ unit, tempC }: { unit: "C" | "F"; tempC: number }) {
   );
 }
 
-function RainInfo({ rainMm, pop }: { rainMm: number; pop: number }) {
-  let label: string;
-  // Use pop as a fallback — if there's a 40%+ chance of rain, show it
-  // even if rainMm is 0 (i.e. not actively raining at the exact moment)
-  if (rainMm > 7) label = "Heavy rain";
-  else if (rainMm > 2) label = "Moderate rain";
-  else if (rainMm > 0.5) label = "Light rain";
-  else if (rainMm > 0 || pop >= 0.4) label = "Light drizzle";
-  else if (pop >= 0.2) label = "Low rain chance";
-  else label = "No rain";
+function WeatherCondition({ conditionId, icon, rainMm, pop }: {
+  conditionId: number;
+  icon: string;
+  rainMm: number;
+  pop: number;
+}) {
+  const getCondition = (): { label: string; sublabel: string } => {
+    if (conditionId < 300) return { label: "Thunderstorm", sublabel: "Do not ride" };
+    if (conditionId < 400) return { label: "Drizzle", sublabel: "Light drizzle" };
+    if (conditionId < 600) return {
+      label: "Rain",
+      sublabel: rainMm > 5 ? "Heavy rain" : rainMm > 2 ? "Moderate" : "Light rain"
+    };
+    if (conditionId < 700) return { label: "Snow", sublabel: "Slippery roads" };
+    if (conditionId === 741) return { label: "Foggy", sublabel: "Low visibility" };
+    if (conditionId >= 700 && conditionId < 800) return { label: "Hazy", sublabel: "Poor visibility" };
+    if (conditionId === 800) return {
+      label: "Clear",
+      sublabel: pop >= 0.3 ? "Rain possible" : "Sunny"
+    };
+    if (conditionId <= 802) return {
+      label: "Partly Cloudy",
+      sublabel: pop >= 0.4 ? "Rain chance" : "Mostly fine"
+    };
+    return {
+      label: "Cloudy",
+      sublabel: pop >= 0.4 ? "Rain chance" : "Overcast"
+    };
+  };
+
+  const { label, sublabel } = getCondition();
 
   return (
-    <div className="absolute contents left-[23px] top-[366px]" data-name="Rain Info">
+    <div className="absolute contents left-[23px] top-[366px]" data-name="Weather Condition">
       <div className="absolute bg-white h-[85px] left-[23px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[366px] w-[173px]" />
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[87px] not-italic text-[24px] text-black top-[390px] whitespace-nowrap">
-        Rain
-      </p>
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[88px] not-italic text-[13px] text-black top-[419px] whitespace-nowrap">
+      <img
+        src={`/weather-icons/${icon}.png`}
+        alt={label}
+        className="absolute left-[27px] size-[60px] top-[375px] weather-icon"
+      />
+      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[87px] not-italic text-[18px] text-black top-[385px] whitespace-nowrap">
         {label}
+      </p>
+      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[88px] not-italic text-[11px] text-black top-[410px] whitespace-nowrap">
+        {sublabel}
       </p>
     </div>
   );
@@ -528,6 +570,8 @@ function WindInfo({ windMs }: { windMs: number }) {
 
 function RoadsInfo({ tempC, rainMm }: { tempC: number; rainMm: number }) {
   let status: string;
+  const isIcy = tempC <= 0 || (tempC <= 2 && rainMm > 0);
+
   if (tempC <= 0) status = "Ice Risk!";
   else if (tempC <= 2) status = "Frost possible";
   else if (rainMm > 2) status = "Wet roads";
@@ -537,6 +581,14 @@ function RoadsInfo({ tempC, rainMm }: { tempC: number; rainMm: number }) {
   return (
     <div className="absolute contents left-[206px] top-[467px]" data-name="Roads info">
       <div className="absolute bg-white h-[85px] left-[206px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[467px] w-[173px]" />
+      <div className="absolute left-[210px] size-[57px] top-[483px]">
+        <img
+          alt="Roads"
+          className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
+          src={isIcy ? imgIcyRoad : imgGreenBycle}
+          
+        />
+      </div>
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[274px] not-italic text-[24px] text-black top-[485px] whitespace-nowrap">
         Roads
       </p>
@@ -716,33 +768,6 @@ function CommuteTimes({
   );
 }
 
-function TempLow({ className }: { className?: string }) {
-  return (
-    <div
-      className={className || "absolute h-[57px] left-[504px] top-[351px] w-[40px]"}
-      data-name="Temp Low"
-    >
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" />
-    </div>
-  );
-}
-
-function TempLow1({ className }: { className?: string }) {
-  return (
-    <div
-      className={className || "absolute h-[59px] left-[31px] top-[477px] w-[39px]"}
-      data-name="Temp Low"
-    >
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <img
-          alt=""
-          className="absolute h-[106.74%] left-[-217.09%] max-w-none top-[-0.51%] w-[316.95%]"
-          src={imgTempLow}
-        />
-      </div>
-    </div>
-  );
-}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -833,37 +858,25 @@ export default function WeatherDetails() {
             pop={rainPop}
           />
         <TempInfo unit={unit} tempC={weather.main.temp} />
-        <RainInfo rainMm={rainMm} pop={rainPop} />
+        <WeatherCondition
+            conditionId={weather.weather?.[0]?.id ?? 800}
+            icon={weather.weather?.[0]?.icon ?? "01d"}
+            rainMm={rainMm}
+            pop={rainPop}
+          />
         <WindInfo windMs={weather.wind.speed} />
         <RoadsInfo tempC={weather.main.temp} rainMm={rainMm} />
         <Location city={displayCity} unit={unit} onToggleUnit={toggleUnit} />
         <SuitabilityScore score={score} label={label} />
         <CommuteTimes forecast={forecast} tzOffset={tzOffset} />
 
-        <div className="absolute left-[27px] size-[60px] top-[375px]">
-          <img
-            alt=""
-            className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-            src={img3DRenderWeatherIconsSetSunShiningClouds261}
-          />
-        </div>
         <div className="absolute left-[210px] size-[60px] top-[377px]">
           <img
             alt=""
             className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-            src={img3DRenderWeatherIconsSetSunShiningClouds2151}
+            src={imgWindy}
           />
         </div>
-
-        <TempLow />
-        <div className="absolute left-[213px] size-[57px] top-[479px]">
-          <img
-            alt=""
-            className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-            src={imgGreenBycle}
-          />
-        </div>
-        <TempLow1 />
       </div> 
     </div> 
   );
