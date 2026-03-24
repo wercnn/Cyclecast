@@ -644,33 +644,51 @@ function Location({
   return (
     <div className="absolute contents left-0 top-0" data-name="Location">
       <div className="absolute bg-white h-[94px] left-0 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-0 w-full" />
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[39px] not-italic text-[16px] text-black top-[61px] whitespace-nowrap">
-        {city}
-      </p>
+
+      
       <button
         onClick={() => navigate("/")}
-        className="absolute flex items-center justify-center left-[10px] size-[21px] top-[60px]"
+        className="absolute left-[10px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full hover:bg-gray-800 hover:text-white transition-colors"
       >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="size-[13px]"
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
+
+      
+      <div className="absolute left-0 w-full top-[55px] flex items-center justify-center gap-[6px] pointer-events-none">
         <div className="-scale-y-100 flex-none rotate-180">
           <div className="relative size-[21px]">
             <img
-              alt="Back"
+              alt=""
               className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
               src={imgImage11}
             />
           </div>
         </div>
-      </button>
+        <p className="font-['Inter:Regular',sans-serif] font-normal leading-[normal] not-italic text-[16px] text-black whitespace-nowrap">
+          {city}
+        </p>
+      </div>
+
       <button
         onClick={onToggleUnit}
-        className="absolute left-[366px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full font-['Inter:Bold',sans-serif] font-bold text-[12px] hover:bg-gray-800 hover:text-white transition-colors"
+        className="absolute right-[10px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full font-['Inter:Bold',sans-serif] font-bold text-[12px] hover:bg-gray-800 hover:text-white transition-colors"
       >
         °{unit}
       </button>
     </div>
   );
 }
-
 function MaskGroup7() {
   return (
     <div className="absolute contents left-[188px] top-[304px]" data-name="Mask group">
@@ -824,7 +842,13 @@ export default function WeatherDetails() {
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        // Check if it's a 404 / city not found error
+        const msg = err.message?.toLowerCase() ?? "";
+        if (msg.includes("404") || msg.includes("not found") || msg.includes("city not found")) {
+          setError(`City "${decoded}" not found. Please check the spelling and try again.`);
+        } else {
+          setError("Something went wrong. Please try again.");
+        }
         setLoading(false);
       });
   }, [city]);
@@ -841,10 +865,20 @@ export default function WeatherDetails() {
 
   if (error || !weather) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f3f3f3] gap-4">
-        <p className="text-red-500 text-lg">{error ?? "Something went wrong."}</p>
-        <button onClick={() => navigate("/")} className="text-blue-600 underline">
-          Go back
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white gap-10 px-10">
+        <div className="relative size-[121px]">
+            <img
+              alt="Location not found"
+              className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
+              src={imgImage11}
+            />
+          </div>
+        <p className="text-red-500 text-[30px] font-medium text-center">{error ?? "Something went wrong."}</p>
+        <button
+          onClick={() => navigate("/")}
+          className="mt-2 px-6 py-2 bg-black text-white rounded-full text-[30px] hover:bg-gray-800 transition-colors"
+        >
+          Search again
         </button>
       </div>
     );
