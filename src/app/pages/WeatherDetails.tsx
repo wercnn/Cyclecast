@@ -254,13 +254,148 @@ function HourlyForecast({
 );
 }
 
-function HazardWarning({ windMs }: { windMs: number }) {
-  // wind.speed from OpenWeather is always m/s — convert correctly
+function HazardWarning({ 
+  windMs, 
+  weatherId, 
+  weatherMain,
+  rainMm,
+  pop,
+  tempC
+}: { 
+  windMs: number;
+  weatherId?: number;
+  weatherMain?: string;
+  rainMm: number;
+  pop: number;
+  tempC: number;
+}) {
   const kmh = msToKmh(windMs);
-  const isGusty = kmh > 36;
+  const alerts: Array<{ message: string; severity: 'moderate' | 'severe' | 'extreme' }> = [];
+
+  // Check for tornado (OpenWeather code 781)
+  if (weatherId === 781) {
+    alerts.push({
+      severity: 'extreme',
+      message: 'Tornado warning: Seek shelter now.'
+    });
+  }
+
+  // Check for thunderstorms (OpenWeather codes 200-232)
+  if (weatherId && weatherId >= 200 && weatherId <= 232) {
+    alerts.push({
+      severity: 'severe',
+      message: 'Thunderstorm warning: Avoid cycling.'
+    });
+  }
+
+  // Check for heavy rain (cats and dogs)
+  if (rainMm > 30) {
+    alerts.push({
+      severity: rainMm > 50 ? 'extreme' : 'severe',
+      message: rainMm > 50 
+        ? 'Extreme rain: Avoid cycling.' 
+        : 'Heavy rain: Rethink cycling.'
+    });
+  } else if (rainMm > 15) {
+    alerts.push({
+      severity: 'moderate',
+      message: 'Heavy rain: Rethink cycling or be very catious.'
+    });
+  }
+
+  // Check for icy rain / freezing rain (OpenWeather code 511, 611, 612)
+  const isFreezingRain = weatherId === 511 || weatherId === 611 || weatherId === 612;
+  if (isFreezingRain || (tempC <= 0 && rainMm > 0)) {
+    alerts.push({
+      severity: 'extreme',
+      message: 'Ice and rain warning: Avoid cycling.'
+    });
+  }
+
+  // Check for snow/sleet (OpenWeather codes 600-622)
+  if (weatherId && weatherId >= 600 && weatherId <= 622) {
+    alerts.push({
+      severity: weatherId >= 620 ? 'severe' : 'moderate',
+      message: weatherId >= 620 
+        ? 'Heavy snow: Avoid cycling' 
+        : 'Snow expected: Rethink cycling or be very catious.'
+    });
+  }
+
+  // Check for fog (OpenWeather code 741)
+  if (weatherId === 741) {
+    alerts.push({
+      severity: 'moderate',
+      message: 'Dense fog warning: Rethink or avoid cycling. Use lights.'
+    });
+  }
+
+  // Check for strong winds (only dangerous levels, no "safe" message)
+  if (kmh > 70) {
+    alerts.push({
+      severity: 'extreme',
+      message: `Extreme wind: ${kmh} km/h: Avoid cycling`
+    });
+  } else if (kmh > 50) {
+    alerts.push({
+      severity: 'severe',
+      message: `Severe winds: ${kmh} km/h: Avoid cycling`
+    });
+  } else if (kmh > 36) {
+    alerts.push({
+      severity: 'moderate',
+      message: `Gusty winds: ${kmh} km/h:  Rethink or avoid cycling. Be Catious.`
+    });
+  }
+
+  // Check for extreme cold
+  if (tempC < -10) {
+    alerts.push({
+      severity: 'extreme',
+      message: `Extreme cold: ${Math.round(tempC)}°C: Avoid cycling.`
+    });
+  } else if (tempC < 0) {
+    alerts.push({
+      severity: 'moderate',
+      message: `Freezing temperatures: ${Math.round(tempC)}°C: Icy roads possible. Check and be catious.`
+    });
+  }
+
+  // Check for extreme heat
+  if (tempC > 35) {
+    alerts.push({
+      severity: 'severe',
+      message: `Extreme heat: ${Math.round(tempC)}°C: Rethink cycling.`
+    });
+  }
+
+    // Determine background color and message based on alerts
+  let bgColor: string;
+  let displayMessage: string;
+
+  if (alerts.length === 0) {
+    // No warnings - show green with safe message
+    bgColor = 'bg-[#4caf50]'; // Green
+    displayMessage = 'No weather hazard alerts.';
+  } else {
+    // Sort by severity and get the most critical alert
+    const severityOrder = { extreme: 3, severe: 2, moderate: 1 };
+    const primaryAlert = alerts.sort((a, b) => 
+      severityOrder[b.severity] - severityOrder[a.severity]
+    )[0];
+    
+    displayMessage = primaryAlert.message;
+    
+    bgColor = 
+      primaryAlert.severity === 'extreme' ? 'bg-[#cc0000]' :
+      primaryAlert.severity === 'severe' ? 'bg-[#e08800]' :
+      'bg-[#ffbe54]';
+  }
+
   return (
     <div className="absolute contents left-[75px] top-[589px]" data-name="Hazard Warning">
-      <div className="absolute bg-[#ffbe54] h-[36px] left-[75px] rounded-[8px] top-[589px] w-[251px]" />
+      <div className={`absolute ${bgColor} h-[36px] left-[75px] rounded-[8px] top-[589px] w-[251px]`} />
+       {alerts.length > 0 && (
       <div className="absolute left-[81px] size-[28px] top-[593px]" data-name="image 6">
         <img
           alt=""
@@ -268,12 +403,11 @@ function HazardWarning({ windMs }: { windMs: number }) {
           src={imgImage6}
         />
       </div>
-      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[112px] not-italic text-[11px] text-black top-[600px] whitespace-nowrap">
-        {isGusty
-          ? `Strong winds: ${kmh} km/h — take care`
-          : `Wind: ${kmh} km/h — safe to ride`}
-      </p>
-    </div>
+    )}
+    <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[112px] not-italic text-[11px] text-black top-[600px] whitespace-nowrap">
+      {displayMessage}
+    </p>
+  </div>
   );
 }
 
@@ -539,7 +673,7 @@ function CommuteTimes({
       <div className="absolute bg-[#eee] h-[34.646px] left-[77px] opacity-65 rounded-[6.929px] top-[881px] w-[220px]" />
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[14px] leading-[normal] left-[96px] not-italic text-[12px] text-black top-[891px] w-[194px]">
         {best[0]
-          ? `${formatLocalTimeFull(best[0].departDt, tzOffset)} Dep — ${formatLocalTimeFull(best[0].arriveDt, tzOffset)} Arr`
+          ? `${formatLocalTimeFull(best[0].departDt, tzOffset)} Departure - ${formatLocalTimeFull(best[0].arriveDt, tzOffset)} Arrival`
           : "No ideal window found"}
       </p>
       {best[0] && (
@@ -568,7 +702,7 @@ function CommuteTimes({
       </div>
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[14px] leading-[normal] left-[96px] not-italic text-[12px] text-black top-[943px] w-[198px]">
         {best[1]
-          ? `${formatLocalTimeFull(best[1].departDt, tzOffset)} Dep — ${formatLocalTimeFull(best[1].arriveDt, tzOffset)} Arr`
+          ? `${formatLocalTimeFull(best[1].departDt, tzOffset)} Departure - ${formatLocalTimeFull(best[1].arriveDt, tzOffset)} Arrival`
           : "No second window found"}
       </p>
       {best[1] && (
@@ -671,6 +805,8 @@ export default function WeatherDetails() {
   const firstSlot = forecast[0];
   const rainMm = firstSlot?.rain?.["1h"] ?? 0;
   const rainPop = firstSlot?.pop ?? 0; 
+  const weatherId = weather.weather?.[0]?.id;
+  const weatherMain = weather.weather?.[0]?.main;
 
   return (
     <div
@@ -682,7 +818,14 @@ export default function WeatherDetails() {
         {/* Hourly forecast — height is dynamic so label is placed just above it */}
         <HourlyForecast unit={unit} forecast={forecast} tzOffset={tzOffset} />
 
-        <HazardWarning windMs={weather.wind.speed} />
+        <HazardWarning 
+          windMs={weather.wind.speed}
+          weatherId={weatherId}
+          weatherMain={weatherMain}
+          rainMm={rainMm}
+          pop={rainPop}
+          tempC={weather.main.temp}
+/>
         <ClothingRecommendations
             tempC={weather.main.temp}
             rainMm={rainMm}
