@@ -9,22 +9,19 @@ import {
   localDateString,
   WeatherData,
   HourlyForecastItem,
-  ForecastResult,
 } from "../../services/weatherServices";
-import svgPaths from "../../imports/svg-hw15znepw5";
-import imgImage13 from "./assets/e5ac59210cdbb29fa9c15cba66918e93793cebbc.png";
-import imgImage11 from "./assets/8a534b23ffc71d15108235d8a88771d778fadec9.png";
-import imgImage15 from "./assets/686df2101d42f56c6b48dbb77f2f421b384d2c43.png";
-import imgImage14 from "./assets/f51d5fcfda4ed4003bc820499a94e98d1d4f22de.png";
-import imgImage6 from "./assets/877ace712fc7f1a2033ef33f8cfdb72008f64b9e.png";
-import imgWindy from "./assets/9b04625cceb5b50bd060708fbb44e90a1e0edc49.png";
-import imgGreenBycle from "./assets/f58c7f9d20a128c4b0c21b92ad8c999b78d5c56b.png";
-import { imgImage22, imgTick } from "../../imports/svg-by301";
+const imgImage13 = "/assets/cloths.png";
+const imgImage11 = "/assets/pin.png";
+const imgImage15 = "/assets/bike.png";
+const imgImage14 = "/assets/clock.png";
+const imgImage6 = "/assets/warning.png";
+const imgWindy = "/assets/windy.png";
+const imgGreenBycle = "/assets/green_bike.png";
 
-import imgTempLow2 from "./assets/temp_low.png";
-import imgTempMid from "./assets/temp_mid.png";
-import imgTempHigh from "./assets/temp_high.png";
-import imgIcyRoad from "./assets/Icy_Road.png";
+const imgTempLow2 = "/assets/temp_low.png";
+const imgTempMid = "/assets/temp_mid.png";
+const imgTempHigh = "/assets/temp_high.png";
+const imgIcyRoad = "/assets/Icy_Road.png";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,63 +82,58 @@ function slotScore(tempC: number, windMs: number, rainMm: number): number {
 function getCyclingScore(weather: WeatherData): { score: number; label: string } {
   let score = 100;
 
-  // ── Temperature ──
-  // Casual commuters: below 5°C is unsafe, comfort-focused bell curve
- // ── Temperature ──
-  const t = weather.main.temp;
-  if (t >= 15 && t <= 25)        score -= 0;
-  else if (t >= 10 && t < 15)    score -= 5;
-  else if (t > 25 && t <= 30)    score -= 5;
-  else if (t > 30 && t <= 35)    score -= 20;
-  else if (t > 35)               score -= 40;
-  else if (t >= 5 && t < 10)     score -= 20;
-  else if (t >= 0 && t < 5)      score -= 42;  // unsafe threshold
-  else if (t >= -10 && t < 0)    score -= 60;  // freezing — UNSAFE
-  else if (t >= -20 && t < -10)  score -= 75;  // extreme cold
-  else if (t < -20)              score -= 90;  // life-threatening cold
-  // ── Wind ──
-  // Casual riders: 30km/h+ = CAUTION, stacks heavily with rain
-  const kmh = msToKmh(weather.wind.speed);
-  if (kmh <= 15)        score -= 0;   // barely noticeable
-  else if (kmh <= 22)   score -= 6;   // light breeze, fine
-  else if (kmh <= 30)   score -= 14;  // noticeable, manageable
-  else if (kmh <= 40)   score -= 28;  // CAUTION territory for casual riders
-  else if (kmh <= 50)   score -= 40;  // hard, tiring, hazardous
-  else if (kmh <= 60)   score -= 52;  // dangerous
-  else                  score -= 65;  // extreme, do not ride
-
-  // ── Rain (moderate policy: light drizzle acceptable, degrades from there) ──
+  // ── RAIN (highest priority — up to 55 points) ──
   const rain = weather.rain?.["1h"] ?? weather.rain?.["3h"] ?? 0;
-  if (rain <= 0.3)        score -= 0;   // dry or negligible drizzle — acceptable
-  else if (rain <= 1)     score -= 8;   // light drizzle, commuters can handle
-  else if (rain <= 2.5)   score -= 20;  // light rain, uncomfortable
-  else if (rain <= 5)     score -= 35;  // moderate rain, unsafe for most commuters
-  else if (rain <= 8)     score -= 48;  // heavy rain
-  else                    score -= 58;  // very heavy, do not ride
+  if (rain <= 0)          score -= 0;   // dry — no penalty
+  else if (rain <= 0.3)   score -= 5;   // negligible drizzle
+  else if (rain <= 1)     score -= 15;  // light drizzle
+  else if (rain <= 2.5)   score -= 28;  // light rain
+  else if (rain <= 5)     score -= 40;  // moderate rain
+  else if (rain <= 8)     score -= 50;  // heavy rain
+  else                    score -= 55;  // very heavy rain
 
-  // ── Wind + Rain combo penalty (casual riders suffer most from both together) ──
-  if (kmh > 25 && rain > 1) score -= 10; // wet + windy is disproportionately bad
+  // ── WIND (second priority — up to 45 points) ──
+  const kmh = msToKmh(weather.wind.speed);
+  if (kmh <= 15)        score -= 0;   // calm
+  else if (kmh <= 25)   score -= 10;  // noticeable
+  else if (kmh <= 35)   score -= 22;  // difficult for casual riders
+  else if (kmh <= 45)   score -= 33;  // hard, tiring
+  else if (kmh <= 55)   score -= 40;  // dangerous
+  else                  score -= 45;  // extreme
 
-  // ── Weather condition codes ──
+  // ── WEATHER CONDITIONS (third priority — up to 30 points) ──
   const id = weather.weather?.[0]?.id ?? 800;
-  if (id < 300)         score -= 55;  // thunderstorm — never ride
-  else if (id < 400)    score -= 10;  // drizzle codes (light, already captured by rain)
-  else if (id < 600)    score -= 18;  // rain condition codes
-  else if (id < 700)    score -= 40;  // snow/sleet — unsafe for casual riders
-  else if (id === 741)  score -= 22;  // fog — visibility danger for commuters
-  else if (id === 721)  score -= 10;  // haze
-  else if (id === 781)  score -= 90;  // tornado
+  if (id < 300)         score -= 30;  // thunderstorm
+  else if (id < 400)    score -= 8;   // drizzle codes
+  else if (id < 600)    score -= 15;  // rain codes
+  else if (id < 700)    score -= 25;  // snow/sleet
+  else if (id === 741)  score -= 18;  // fog
+  else if (id === 721)  score -= 8;   // haze
+  else if (id === 781)  score -= 30;  // tornado
 
-  // ── Humidity (comfort factor — matters for casual commuters in heat) ──
+  // ── TEMPERATURE (lowest priority — up to 20 points) ──
+  const t = weather.main.temp;
+  if (t >= 12 && t <= 28)       score -= 0;
+  else if (t >= 8 && t < 12)    score -= 3;
+  else if (t > 28 && t <= 33)   score -= 3;
+  else if (t > 33 && t <= 38)   score -= 8;
+  else if (t > 38)              score -= 14;
+  else if (t >= 3 && t < 8)     score -= 8;
+  else if (t >= 0 && t < 3)     score -= 14;
+  else if (t >= -5 && t < 0)    score -= 25;  // freezing
+  else if (t >= -10 && t < -5)  score -= 40;  // severe cold
+  else if (t >= -15 && t < -10) score -= 55;  // extreme cold — should be UNSAFE
+  else if (t < -15)             score -= 65;  // life-threatening
+
+  // ── HUMIDITY (minor comfort factor) ──
   const hum = weather.main.humidity;
-  if (hum > 90 && t > 20)       score -= 12; // oppressive humidity
-  else if (hum > 80 && t > 26)  score -= 7;  // warm + humid, tiring
+  if (hum > 90 && t > 22)      score -= 5;
+  else if (hum > 80 && t > 28) score -= 3;
 
   score = Math.max(0, Math.min(100, score));
   const label = score >= 70 ? "SAFE" : score >= 40 ? "CAUTION" : "UNSAFE";
   return { score, label };
 }
-
 // Pick the 2 best commute departure slots from today's forecast (city local time)
 function getBestCommuteTimes(
   forecast: HourlyForecastItem[],
@@ -260,16 +252,12 @@ function HourlyForecast({
 function HazardWarning({ 
   windMs, 
   weatherId, 
-  weatherMain,
   rainMm,
-  pop,
   tempC
 }: { 
   windMs: number;
   weatherId?: number;
-  weatherMain?: string;
   rainMm: number;
-  pop: number;
   tempC: number;
 }) {
   const kmh = msToKmh(windMs);
@@ -648,20 +636,17 @@ function Location({
       
       <button
         onClick={() => navigate("/")}
-        className="absolute left-[10px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full hover:bg-gray-800 hover:text-white transition-colors"
+        className="absolute left-[10px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full hover:bg-gray-800 hover:text-white transition-colors group"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="size-[13px]"
-        >
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
+        <span
+          className="size-[13px] bg-black group-hover:bg-white transition-colors"
+          style={{
+            maskImage: "url('/assets/back-arrow.svg')",
+            maskSize: "contain",
+            maskRepeat: "no-repeat",
+            maskPosition: "center",
+          }}
+        />
       </button>
 
       
@@ -689,20 +674,7 @@ function Location({
     </div>
   );
 }
-function MaskGroup7() {
-  return (
-    <div className="absolute contents left-[188px] top-[304px]" data-name="Mask group">
-      <div
-        className="absolute h-[25px] left-[186px] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[2px_1px] mask-size-[23px_23px] top-[303px] w-[27px]"
-        style={{ maskImage: `url('${imgTick}')` }}
-      >
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 function SuitabilityScore({ score, label }: { score: number; label: string }) {
   const color =
@@ -744,7 +716,6 @@ function SuitabilityScore({ score, label }: { score: number; label: string }) {
           src={imgImage15}
         />
       </div>
-      <MaskGroup7 />
     </div>
   );
 }
@@ -787,21 +758,8 @@ function CommuteTimes({
       )}
 
       {/* Row 2 */}
-      <div className="absolute h-[34.51px] left-[77px] top-[933px] w-[220px]">
-        <svg
-          className="absolute block size-full"
-          fill="none"
-          preserveAspectRatio="none"
-          viewBox="0 0 220 34.5098"
-        >
-          <path
-            d={svgPaths.p7105000}
-            fill="var(--fill-0, #EEEEEE)"
-            id="Rectangle 17"
-            opacity="0.65"
-          />
-        </svg>
-      </div>
+      <div className="absolute bg-[#eee] h-[34.51px] left-[77px] opacity-65 rounded-[6.929px] top-[933px] w-[220px]" />
+        
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[14px] leading-[normal] left-[96px] not-italic text-[12px] text-black top-[943px] w-[198px]">
         {best[1]
           ? `${formatLocalTimeFull(best[1].departDt, tzOffset)} Departure - ${formatLocalTimeFull(best[1].arriveDt, tzOffset)} Arrival`
@@ -897,14 +855,13 @@ export default function WeatherDetails() {
   const rainMm = firstSlot?.rain?.["1h"] ?? 0;
   const rainPop = firstSlot?.pop ?? 0; 
   const weatherId = weather.weather?.[0]?.id;
-  const weatherMain = weather.weather?.[0]?.main;
 
   return (
     <div
-      className="bg-[#f3f3f3] relative size-full overflow-x-hidden overflow-y-auto"
+      className="bg-[#f3f3f3] min-h-screen flex justify-center overflow-x-hidden overflow-y-auto"
       data-name="iPhone 17 - 1"
     >
-      <div className="relative min-h-[1200px] w-full max-w-[420px] mx-auto bg-white overflow-hidden">
+      <div className="relative min-h-[1200px] w-[400px] flex-shrink-0 bg-white overflow-hidden">
 
         {/* Hourly forecast — height is dynamic so label is placed just above it */}
         <HourlyForecast unit={unit} forecast={forecast} tzOffset={tzOffset} />
@@ -912,9 +869,7 @@ export default function WeatherDetails() {
         <HazardWarning 
           windMs={weather.wind.speed}
           weatherId={weatherId}
-          weatherMain={weatherMain}
           rainMm={rainMm}
-          pop={rainPop}
           tempC={weather.main.temp}
 />
         <ClothingRecommendations

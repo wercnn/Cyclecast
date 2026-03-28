@@ -11,11 +11,10 @@ export function msToKmh(ms: number): number {
 // Format a UTC unix timestamp into the city's local hour label e.g. "3pm", "12am"
 // tzOffset is the city's UTC offset in seconds (from API response city.timezone)
 export function formatLocalHour(dt: number, tzOffset: number): string {
-  const localDate = new Date((dt + tzOffset) * 1000);
-  const h = localDate.getUTCHours(); // use UTC because we already shifted by tzOffset
-  if (h === 0) return "12am";
-  if (h === 12) return "12pm";
-  return h < 12 ? `${h}am` : `${h - 12}pm`;
+  const date = new Date((dt + tzOffset) * 1000);
+  const hours = date.getUTCHours().toString().padStart(2, "0");
+  const minutes = date.getUTCMinutes().toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
 }
 
 // Format a UTC unix timestamp into city local HH:MM e.g. "09:00"

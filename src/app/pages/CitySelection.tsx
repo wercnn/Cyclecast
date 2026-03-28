@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { Search, MapPin, Cloud } from "lucide-react";
-import imgImage22 from "./assets/01c46dafbcb4e6239b234bcb42b1b4c0ee010652.png";
+const imgImage22 = "/assets/background.png";
 export default function CitySelection() {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
@@ -59,7 +59,7 @@ export default function CitySelection() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Enter city or airport..."
+                placeholder="Enter city..."
                 className="bg-gray-50 border-2 border-gray-200 h-14 rounded-xl w-full pl-12 pr-4 font-['Inter:Regular',sans-serif] text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
               />
             </div>
