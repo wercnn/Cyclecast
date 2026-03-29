@@ -367,7 +367,7 @@ function HazardWarning({
   if (alerts.length === 0) {
     // No warnings - show green with safe message
     bgColor = 'bg-[#4caf50]'; // Green
-    displayMessage = '☑️ No emergency weather hazard alerts now ☑️';
+    displayMessage = 'No emergency weather hazard alerts now.';
   } else {
     // Sort by severity and get the most critical alert
     const severityOrder = { extreme: 3, severe: 2, moderate: 1 };
