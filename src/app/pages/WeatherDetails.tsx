@@ -267,7 +267,7 @@ function HazardWarning({
   if (weatherId === 781) {
     alerts.push({
       severity: 'extreme',
-      message: 'Tornado warning: Seek shelter.'
+      message: '⚠️ Tornado warning: Seek shelter.'
     });
   }
 
@@ -275,7 +275,7 @@ function HazardWarning({
   if (weatherId && weatherId >= 200 && weatherId <= 232) {
     alerts.push({
       severity: 'severe',
-      message: 'Thunderstorm warning: Avoid cycling.'
+      message: '⚠️ Thunderstorm warning: Avoid cycling.'
     });
   }
 
@@ -284,13 +284,13 @@ function HazardWarning({
     alerts.push({
       severity: rainMm > 50 ? 'extreme' : 'severe',
       message: rainMm > 50 
-        ? 'Extreme rain: Avoid cycling.' 
-        : 'Heavy rain: Rethink cycling.'
+        ? '⚠️ Extreme rain: Avoid cycling.' 
+        : '⚠️ Heavy rain: Rethink cycling.'
     });
   } else if (rainMm > 15) {
     alerts.push({
       severity: 'moderate',
-      message: 'Rain: Be catious.'
+      message: '🚫 Rain: Be cautious.'
     });
   }
 
@@ -299,7 +299,7 @@ function HazardWarning({
   if (isFreezingRain || (tempC <= 0 && rainMm > 0)) {
     alerts.push({
       severity: 'extreme',
-      message: 'Ice and rain warning: Avoid cycling.'
+      message: '⚠️ Ice and rain warning: Avoid cycling.'
     });
   }
 
@@ -308,8 +308,8 @@ function HazardWarning({
     alerts.push({
       severity: weatherId >= 620 ? 'severe' : 'moderate',
       message: weatherId >= 620 
-        ? 'Heavy snow: Avoid cycling' 
-        : 'Snow: Rethink cycling, be catious.'
+        ? '⚠️ Heavy snow: Avoid cycling.' 
+        : '🚫 Snow: Rethink cycling, be cautious.'
     });
   }
 
@@ -317,7 +317,7 @@ function HazardWarning({
   if (weatherId === 741) {
     alerts.push({
       severity: 'moderate',
-      message: 'Fog warning: Rethink cycling. Use lights.'
+      message: '🚫 Fog warning: Rethink cycling. Use lights.'
     });
   }
 
@@ -325,17 +325,17 @@ function HazardWarning({
   if (kmh > 50) {
     alerts.push({
       severity: 'extreme',
-      message: `Extreme wind: Avoid cycling`
+      message: `⚠️ Extreme wind: Avoid cycling.`
     });
   } else if (kmh > 35) {
     alerts.push({
       severity: 'severe',
-      message: `Severe winds: Avoid cycling`
+      message: `⚠️ Severe winds: Avoid cycling.`
     });
   } else if (kmh > 25) {
     alerts.push({
       severity: 'moderate',
-      message: `Gusty winds:  Rethink cycling, be catious.`
+      message: `🚫 Gusty winds: Rethink cycling, be cautious.`
     });
   }
 
@@ -343,12 +343,12 @@ function HazardWarning({
   if (tempC < -10) {
     alerts.push({
       severity: 'extreme',
-      message: `Extreme cold: Avoid cycling.`
+      message: `⚠️ Extreme cold: Avoid cycling.`
     });
   } else if (tempC < 0) {
     alerts.push({
       severity: 'moderate',
-      message: `Icy roads possible: avoid cycling, be catious.`
+      message: `🚫 Icy roads possible: Rethink cycling, be cautious.`
     });
   }
 
@@ -356,7 +356,7 @@ function HazardWarning({
   if (tempC > 35) {
     alerts.push({
       severity: 'severe',
-      message: `Extreme heat: Rethink cycling.`
+      message: `⚠️ Extreme heat: Avoid cycling.`
     });
   }
 
@@ -367,7 +367,7 @@ function HazardWarning({
   if (alerts.length === 0) {
     // No warnings - show green with safe message
     bgColor = 'bg-[#4caf50]'; // Green
-    displayMessage = 'No emergency weather hazard alerts now.';
+    displayMessage = '☑️ No emergency weather hazard alerts now.';
   } else {
     // Sort by severity and get the most critical alert
     const severityOrder = { extreme: 3, severe: 2, moderate: 1 };
@@ -387,16 +387,7 @@ function HazardWarning({
   return (
     <div className="absolute contents left-[75px] top-[589px]" data-name="Hazard Warning">
      <div className={`absolute ${bgColor} h-[36px] left-[31px] rounded-[8px] top-[589px] w-[340px]`} />
-       {alerts.length > 0 && (
-     <div className="absolute left-[41px] size-[28px] top-[593px]" data-name="image 6">
-        <img
-          alt=""
-          className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-          src={imgImage6}
-        />
-      </div>
-    )}
-   <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[77px] not-italic text-[11px] text-white top-[600px] whitespace-nowrap">
+   <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[normal] left-[37px] not-italic text-[11px] text-white top-[600px] whitespace-nowrap">
       {displayMessage}
     </p>
   </div>
