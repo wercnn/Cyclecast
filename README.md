@@ -10,8 +10,7 @@ CycleCast is a cycling-focused weather web app designed for university students 
 
 | Home Screen | Dashboard |
 |---|---|
-| ![Home](<img width="1438" height="744" alt="homepage" src="https://github.com/user-attachments/assets/e4dae9f0-6e8e-4d66-b4eb-15ff5776e77b" />)| ![Dashboard](<img width="196" height="621" alt="dashboard" src="https://github.com/user-attachments/assets/a6be8ff9-af47-49c5-a398-e3f6a1bd4ef0" />) |
-
+| ![Home Screen](https://github.com/user-attachments/assets/e4dae9f0-6e8e-4d66-b4eb-15ff5776e77b) | ![Dashboard](https://github.com/user-attachments/assets/a6be8ff9-af47-49c5-a398-e3f6a1bd4ef0) |
 ---
 
 ## ✨ Features
