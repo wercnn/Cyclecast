@@ -1,3 +1,10 @@
+/** Complete weather details for a searched 
+ * 
+ * Grabs current weather data as well as 96 hour forecast data and fits it into a 400 px page with:
+ * Cycling suitability score, hazard warnings, wind/temperature/road conditions, clothing recommendations, ideal commute times and hourly forecasts
+ * 
+ */
+
 import { useParams, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import {
@@ -10,6 +17,8 @@ import {
   WeatherData,
   HourlyForecastItem,
 } from "../../services/weatherServices";
+
+// Static assest imports
 const imgImage13 = "/assets/cloths.png";
 const imgImage11 = "/assets/pin.png";
 const imgImage15 = "/assets/bike.png";
@@ -23,29 +32,33 @@ const imgTempMid = "/assets/temp_mid.png";
 const imgTempHigh = "/assets/temp_high.png";
 const imgIcyRoad = "/assets/Icy_Road.png";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helper Functions
 
+// Converts a Celsius temperature to the current display unit
+// The returned integer is rounded for a cleaner UI
 function toDisplay(tempC: number, unit: "C" | "F"): number {
   return unit === "C" ? Math.round(tempC) : Math.round((tempC * 9) / 5 + 32);
 }
 
-// formatDayLabel uses city-local date for Today/Tomorrow comparison
+// Returns a day label that a person can read the a forecast slot 
+// Relative to the city's local calender, not the browsers 
 function formatDayLabel(dt: number, tzOffset: number): string {
   const cityDateStr = localDateString(dt, tzOffset);
   const todayStr = localDateString(Math.floor(Date.now() / 1000), tzOffset);
   const tomorrowTs = Math.floor(Date.now() / 1000) + 86400;
   const tomorrowStr = localDateString(tomorrowTs, tzOffset);
 
+  // Today and Tomorrow 
   if (cityDateStr === todayStr) return "Today";
   if (cityDateStr === tomorrowStr) return "Tomorrow";
 
-  // Short weekday label using city local date
+  // Days of the week label for the rest of the days
   const cityDate = new Date((dt + tzOffset) * 1000);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return `${days[cityDate.getUTCDay()]} ${cityDate.getUTCDate()}`;
 }
 
-// Group slots by city-local calendar day
+// Group slots by city's local calander
 function groupByDay(
   slots: HourlyForecastItem[],
   tzOffset: number
@@ -54,7 +67,7 @@ function groupByDay(
   const order: string[] = [];
   for (const item of slots) {
     const key = localDateString(item.dt, tzOffset);
-    if (!map[key]) { map[key] = []; order.push(key); }
+    if (!map[key]) { map[key] = []; order.push(key); } // insertion order is tracked so days are in chronological order
     map[key].push(item);
   }
   return order.map((key) => ({
@@ -63,55 +76,65 @@ function groupByDay(
   }));
 }
 
-// Score a single weather moment for cycling suitability
+// Cycling Score Helpers 
+
+// Scores a single forecast hour for cycling suitability (0-100)
+// Used by getBestCommuteTimes to rank the best departure slots 
 function slotScore(tempC: number, windMs: number, rainMm: number): number {
-  let score = 100;
+  let score = 100; // Inital score with no deductions
   const kmh = msToKmh(windMs);
+  // Wind deductions
   if (kmh > 50) score -= 40;
   else if (kmh > 35) score -= 25;
   else if (kmh > 20) score -= 10;
+  // Temperature deductions
   if (tempC < 0) score -= 30;
   else if (tempC < 5) score -= 15;
   else if (tempC > 35) score -= 20;
+  // Rain deductions
   if (rainMm > 5) score -= 35;
   else if (rainMm > 1) score -= 20;
   else if (rainMm > 0) score -= 8;
   return Math.max(0, score);
 }
 
+// Calculates the total cycling suitability score for current conditions
+// Returns a 0-100 score and a label: Safe, Caution, Unsafe.
+// Rain, wind, and weather conditions and temperature depending on the condition, get the most deductions, followed by humidity
+// 70 and above score is safe, 40 and above is caution and below 40 is unsafe conditions
 function getCyclingScore(weather: WeatherData): { score: number; label: string } {
   let score = 100;
 
-  // ── RAIN (highest priority — up to 55 points) ──
+  // Rain: Up to 55 point deductions possible for severity 
   const rain = weather.rain?.["1h"] ?? weather.rain?.["3h"] ?? 0;
-  if (rain <= 0)          score -= 0;   // dry — no penalty
+  if (rain <= 0)          score -= 0;   // dry: no deductions 
   else if (rain <= 0.3)   score -= 5;   // negligible drizzle
   else if (rain <= 1)     score -= 15;  // light drizzle
   else if (rain <= 2.5)   score -= 28;  // light rain
   else if (rain <= 5)     score -= 40;  // moderate rain
   else if (rain <= 8)     score -= 50;  // heavy rain
-  else                    score -= 55;  // very heavy rain
+  else                    score -= 55;  // very heavy rain, most deductions 
 
-  // ── WIND (second priority — up to 45 points) ──
+  // Wind: Up to 45 point deductions possible for severity 
   const kmh = msToKmh(weather.wind.speed);
-  if (kmh <= 15)        score -= 0;   // calm
-  else if (kmh <= 25)   score -= 10;  // noticeable
+  if (kmh <= 15)        score -= 0;   // calm winds
+  else if (kmh <= 25)   score -= 10;  // noticeable winds
   else if (kmh <= 35)   score -= 22;  // difficult for casual riders
-  else if (kmh <= 45)   score -= 33;  // hard, tiring
-  else if (kmh <= 55)   score -= 40;  // dangerous
-  else                  score -= 45;  // extreme
+  else if (kmh <= 45)   score -= 33;  // hard, tiring winds
+  else if (kmh <= 55)   score -= 40;  // dangerous winds
+  else                  score -= 45;  // extreme winds
 
-  // ── WEATHER CONDITIONS (third priority — up to 30 points) ──
+  // Weather Conditions: Up to 65 point deductions possible for severity 
   const id = weather.weather?.[0]?.id ?? 800;
-  if (id < 300)         score -= 30;  // thunderstorm
+  if (id < 300)         score -= 55;  // thunderstorm
   else if (id < 400)    score -= 8;   // drizzle codes
   else if (id < 600)    score -= 15;  // rain codes
   else if (id < 700)    score -= 25;  // snow/sleet
   else if (id === 741)  score -= 18;  // fog
   else if (id === 721)  score -= 8;   // haze
-  else if (id === 781)  score -= 30;  // tornado
+  else if (id === 781)  score -= 65;  // tornado
 
-  // ── TEMPERATURE (lowest priority — up to 20 points) ──
+  // Temperature: Up to 65 point deductions possible for severity 
   const t = weather.main.temp;
   if (t >= 12 && t <= 28)       score -= 0;
   else if (t >= 8 && t < 12)    score -= 3;
@@ -122,19 +145,29 @@ function getCyclingScore(weather: WeatherData): { score: number; label: string }
   else if (t >= 0 && t < 3)     score -= 14;
   else if (t >= -5 && t < 0)    score -= 25;  // freezing
   else if (t >= -10 && t < -5)  score -= 40;  // severe cold
-  else if (t >= -15 && t < -10) score -= 55;  // extreme cold — should be UNSAFE
-  else if (t < -15)             score -= 65;  // life-threatening
+  else if (t >= -15 && t < -10) score -= 55;  // extreme cold: Unsafe
+  else if (t < -15)             score -= 65;  // life threatening condition
 
-  // ── HUMIDITY (minor comfort factor) ──
+  // Humidity: Mostly a comfort factor
   const hum = weather.main.humidity;
   if (hum > 90 && t > 22)      score -= 5;
   else if (hum > 80 && t > 28) score -= 3;
 
+  // Labelling the score as stated
   score = Math.max(0, Math.min(100, score));
   const label = score >= 70 ? "SAFE" : score >= 40 ? "CAUTION" : "UNSAFE";
   return { score, label };
 }
-// Pick the 2 best commute departure slots from today's forecast (city local time)
+// Pick the 2 best commuting departure slots from today's forecast depending on the city's local time
+
+/**
+ * 1. Filter slots to todays local city calander 
+ * 2. Score each slot with slotScore()
+ * 3. Sort in descending order, and make sure to pick slots that are at at least 3 hours apaprt to avoid clustering
+ * 4. Sort the final chosen two in ascending order so the closest to the current time in the city displays on top, in order
+ * 
+ * Returns an empty array if no slots exist, for example if it is late at night
+ */
 function getBestCommuteTimes(
   forecast: HourlyForecastItem[],
   tzOffset: number
@@ -156,6 +189,7 @@ function getBestCommuteTimes(
     ),
   }));
 
+  // Pick best score first greedily, skip within 3 hour slots to the picked one 
   const sorted = [...scored].sort((a, b) => b.score - a.score);
   const picks: typeof scored = [];
   for (const c of sorted) {
@@ -165,6 +199,8 @@ function getBestCommuteTimes(
       if (picks.length === 2) break;
     }
   }
+
+  // Sort again for chronological display
   picks.sort((a, b) => a.dt - b.dt);
 
   return picks.map((p) => ({
@@ -174,8 +210,17 @@ function getBestCommuteTimes(
   }));
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// Other components 
 
+/** 
+ * Hourly Forecast
+ * 
+ * Horicontally scrollable component of hourly weather slots, grouped by the city's local calender day.
+ * Shows up to 4 days so 96 hours in the selection tab
+ * 
+ * Each card has: local time, weather icon, temperature 
+ * 
+ */
 function HourlyForecast({
   unit,
   forecast,
@@ -194,12 +239,12 @@ function HourlyForecast({
     className="absolute bg-white left-[30px] rounded-[8px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-[1005px] w-[341px] h-[170px] overflow-hidden"
     data-name="Hourly Forecast"
   >
-    {/* Title INSIDE the box */}
+    {/* Makes sure the title of the component stays in the component box */}
     <div className="px-3 pt-2 text-[14px] font-['Inter:Regular',sans-serif] text-black">
       Hourly Forecast
     </div>
 
-    {/* Day selector tabs */}
+    {/* Day selector tabs, filled black when clicked on, grey if not */}
     <div className="flex gap-1 px-3 pt-2 pb-1">
       {days.map((day, i) => (
         <button
@@ -216,7 +261,7 @@ function HourlyForecast({
       ))}
     </div>
 
-    {/* Hourly slots */}
+    {/* Hourly slots that are scrollable cards */}
     <div className="flex gap-2 px-3 py-2 overflow-x-auto overflow-y-hidden h-[100px]">
       {slots.length === 0 ? (
         <p className="text-[13px] text-gray-400 py-2 px-1">
@@ -249,6 +294,19 @@ function HourlyForecast({
 );
 }
 
+/**
+ * Hazard Warning
+ * 
+ * Looks at the current weather conditions and alerts the most critical alert as a coloured banner:
+ * Green for no hazards, orange for moderate hazards such as gusty winds, red for severe and extreme hazards such as a thunderstorm 
+ * 
+ * The priorty order for multiple hazards is: 
+ * tornado > thunderstorm > heavy rain > freezing rain > snow > fog > strong winds > extreme cold > extreme heat
+ * 
+ * The highest severity one is shown for the moment 
+ * 
+ * The emojis for alerts were chosen to not collide with the colour coded backround of the alert while also reflecting severity
+ */
 function HazardWarning({ 
   windMs, 
   weatherId, 
@@ -321,7 +379,7 @@ function HazardWarning({
     });
   }
 
-  // Check for strong winds (only dangerous levels, no "safe" message)
+  // Check for strong winds (alert for only dangerous levels, no "safe" message)
   if (kmh > 50) {
     alerts.push({
       severity: 'extreme',
@@ -360,12 +418,12 @@ function HazardWarning({
     });
   }
 
-    // Determine background color and message based on alerts
+  // Determine background color and message based on alerts
   let bgColor: string;
   let displayMessage: string;
 
   if (alerts.length === 0) {
-    // No warnings - show green with safe message
+    // No warnings: show green with safe message
     bgColor = 'bg-[#4caf50]'; // Green
     displayMessage = '☑️ No emergency weather hazard alerts now.';
   } else {
@@ -378,9 +436,9 @@ function HazardWarning({
     displayMessage = primaryAlert.message;
     
     bgColor = 
-      primaryAlert.severity === 'extreme' ? 'bg-[#cc0000]' :
-      primaryAlert.severity === 'severe' ? 'bg-[#cc0000]' :
-      primaryAlert.severity === 'moderate' ? 'bg-[#ff9900]' :
+      primaryAlert.severity === 'extreme' ? 'bg-[#cc0000]' : // Red
+      primaryAlert.severity === 'severe' ? 'bg-[#cc0000]' : // Red
+      primaryAlert.severity === 'moderate' ? 'bg-[#ff9900]' : // Orange
       'bg-[#1a9e00]';
   }
 
@@ -393,6 +451,19 @@ function HazardWarning({
   </div>
   );
 }
+
+/**
+ * Clothing Recommendations 
+ * 
+ * Gets a list of gear and outfit suggestions from current conditions
+ *  
+ * Priority of gear and clothes:
+ * Temperature layers > rain protection > snow gear > gloves > leg warmers > wind protection > visibility > heat protection
+ * 
+ * Displays the most critical items. Priority list made by the biggest suprise weather factors such as rain and forgettable gears being given higher priorty
+ * 
+ * Default is shirt and pants for perfect weather 
+ */
 
 function ClothingRecommendations({
   tempC,
@@ -410,7 +481,7 @@ function ClothingRecommendations({
   const kmh = msToKmh(windMs);
   const items: string[] = [];
 
-  // ── Temperature-based layers ──
+  // Recommenations for temperature 
   if (tempC < -10) items.push("Insulated jacket, thermal layers");
   else if (tempC < 0) items.push("Thick heavy jacket");
   else if (tempC < 5) items.push("Thick jacket");
@@ -418,38 +489,38 @@ function ClothingRecommendations({
   else if (tempC < 18) items.push("Light jacket");
   else if (tempC > 35) items.push("Breathable jacket");
 
-  // ── Rain protection ──
+  // Recommenations for rain and rain probability 
   if (rainMm > 5 || pop >= 0.6) items.push("Waterproof jacket, pants");
   else if (rainMm > 0 || pop >= 0.4) items.push("Waterproof jacket");
 
-  // ── Snow/ice gear ──
+  // Recommenations for ice tires (codes 600-622)
   if (weatherId && weatherId >= 600 && weatherId <= 622) {
     items.push("Spiked ice tires");
   }
 
-  // ── Hand protection ──
+  // Recommenations for hand protection
   if (tempC < -10) items.push("Insulated gloves");
   else if (tempC < 0) items.push("Winter gloves");
   else if (tempC < 5) items.push("Warm gloves");
   else if (tempC < 12) items.push("Light gloves");
 
-  // ── Leg protection ──
+  // Recommenations for leg protection
   if (tempC < 0) items.push("Thermal tights, leg warmers");
   else if (tempC < 10) items.push("Thermal tights");
   else if (tempC < 16) items.push("Cycling tights");
 
-  // ── Wind protection ──
+  // Recommenations for wind 
   if (kmh > 40) items.push("Wind jacket");
   else if (kmh > 30 && tempC >= 12) items.push("Wind vest");
 
-  // ── Visibility/safety gear ──
-  if (weatherId === 741) items.push("Front, rear lights");
+  // Gear for visibility and safety 
+  if (weatherId === 741) items.push("Front, rear lights"); // For fog 
   if (rainMm > 2) items.push("Rain jacket/vest");
 
-  // ── Heat protection ──
+  // Recommenations for heat 
   if (tempC > 30) items.push("Sunscreen, cap");
 
-  // ── Default for perfect weather ──
+  // Default for perfect conditions 
   if (tempC >= 18 && tempC <= 30 && items.length === 0) {
     items.push("Shirt, pants");
   }
@@ -483,6 +554,13 @@ function ClothingRecommendations({
   );
 }
 
+/**
+ * Temperature Information
+ * 
+ * Displays the current temperature for Celsius with an icon:
+ * Red and high for hotter, grey and middle for moderate, and blue and low for colder temperatures 
+ * 
+ */
 function TempInfo({ unit, tempC }: { unit: "C" | "F"; tempC: number }) {
   const temp = toDisplay(tempC, unit);
 
@@ -511,6 +589,16 @@ function TempInfo({ unit, tempC }: { unit: "C" | "F"; tempC: number }) {
   );
 }
 
+/**
+ * Weather Conditions
+ * 
+ * An open weather condition ID is mapped to a label and a sublabel, such as Thunderstorm label and Do not ride sublabel
+ * 
+ * The icon changes accordingly to the weather condition to reflect it best
+ * 
+ * pop is used for probable and ambiguous state guessing, such as Rain possible
+ *  
+ */
 function WeatherCondition({ conditionId, icon, rainMm, pop }: {
   conditionId: number;
   icon: string;
@@ -529,7 +617,7 @@ function WeatherCondition({ conditionId, icon, rainMm, pop }: {
     if (conditionId >= 700 && conditionId < 800) return { label: "Hazy", sublabel: "Poor visibility" };
     if (conditionId === 800) return {
       label: "Clear",
-      sublabel: pop >= 0.3 ? "Rain possible" : "Sunny"
+      sublabel: pop >= 0.3 ? "Rain possible" : "Clear"
     };
     if (conditionId <= 802) return {
       label: "Partly Cloudy",
@@ -561,6 +649,17 @@ function WeatherCondition({ conditionId, icon, rainMm, pop }: {
   );
 }
 
+/**
+ * Wind Information
+ * 
+ * Shows wind speed in km/h with a readable label such as light
+ * 
+ * Always converts from m/s
+ * 
+ * Levels:
+ * Lower than 20 is light, between 20 and 39 is moderate and 40 and above is strong winds
+ * 
+ */
 function WindInfo({ windMs }: { windMs: number }) {
   // wind.speed from OpenWeather is always m/s — 1 m/s = 3.6 km/h
   const kmh = msToKmh(windMs);
@@ -579,6 +678,17 @@ function WindInfo({ windMs }: { windMs: number }) {
   );
 }
 
+/**
+ * Road's Information
+ * 
+ * Shows road sruface status based on temperature and rain fall
+ * 
+ * An icy road image is displayed when ice is likely, else a regular bike icon is displayed
+ * 
+ * Flagging for ice is for lower than 0 degree Celcius or lower than 2 degrees Celsius when combined with rainfall
+ * 
+ * */
+
 function RoadsInfo({ tempC, rainMm }: { tempC: number; rainMm: number }) {
   let status: string;
   const isIcy = tempC <= 0 || (tempC <= 2 && rainMm > 0);
@@ -596,7 +706,7 @@ function RoadsInfo({ tempC, rainMm }: { tempC: number; rainMm: number }) {
         <img
           alt="Roads"
           className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-          src={isIcy ? imgIcyRoad : imgGreenBycle}
+          src={isIcy ? imgIcyRoad : imgGreenBycle} // Green to signal okay
           
         />
       </div>
@@ -610,6 +720,15 @@ function RoadsInfo({ tempC, rainMm }: { tempC: number; rainMm: number }) {
   );
 }
 
+/**
+ * Location
+ * 
+ * Top bar with a city name and two buttons:
+ * Back arrow on the left to navigate to the input city page, and a Celsius to Fahrenheit toggle button that calls onToggleUnit
+ * 
+ * The city label uses pointer events none so its does not intercept any clicks for buttons behind it
+ * 
+ */
 function Location({
   city,
   unit,
@@ -624,7 +743,7 @@ function Location({
     <div className="absolute contents left-0 top-0" data-name="Location">
       <div className="absolute bg-white h-[94px] left-0 shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] top-0 w-full" />
 
-      
+      {/* Left back button to navigate: The colour inverts when hovered on */}
       <button
         onClick={() => navigate("/")}
         className="absolute left-[10px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full hover:bg-gray-800 hover:text-white transition-colors group"
@@ -640,7 +759,7 @@ function Location({
         />
       </button>
 
-      
+       {/* Center city label: pointer events none prevents blocking button clicks */}
       <div className="absolute left-0 w-full top-[55px] flex items-center justify-center gap-[6px] pointer-events-none">
         <div className="-scale-y-100 flex-none rotate-180">
           <div className="relative size-[21px]">
@@ -655,7 +774,8 @@ function Location({
           {city}
         </p>
       </div>
-
+      
+      {/* Unit toggle: displays the active unit */}
       <button
         onClick={onToggleUnit}
         className="absolute right-[10px] size-[25px] top-[58px] flex items-center justify-center bg-gray-200 text-black rounded-full font-['Inter:Bold',sans-serif] font-bold text-[12px] hover:bg-gray-800 hover:text-white transition-colors"
@@ -666,7 +786,15 @@ function Location({
   );
 }
 
-
+/**
+ *  Suitability Score
+ * 
+ * Large top centre component showing the cycling score.
+ * 
+ * The backround graident and text colour reflect the score level:
+ * Green for safe and 70 and over, orange for caution and 40 and over, red for unsafe and below 40
+ * 
+ *  */
 function SuitabilityScore({ score, label }: { score: number; label: string }) {
   const color =
     score >= 70 ? "#1a9e00" : score >= 40 ? "#ff9900" : "#cc0000";
@@ -711,6 +839,18 @@ function SuitabilityScore({ score, label }: { score: number; label: string }) {
   );
 }
 
+/**
+ * Commute Times 
+ * 
+ * Shows the top 2 deperature times for today from getBestCommuteTimes()
+ * 
+ * Each row has a deperature time and a weather icon for that slot
+ * 
+ * It shows a single message if fewer than 2 windows are available for the time being
+ * It shows no messages if no windows are found, for example for late at night times when the day is soon to be over
+ * 
+ *  
+ */
 function CommuteTimes({
   forecast,
   tzOffset,
@@ -733,11 +873,11 @@ function CommuteTimes({
         Ideal Commute Times
       </p>
 
-      {/* Row 1 */}
+      {/* Row 1: The best window */}
       <div className="absolute bg-[#eee] h-[34.646px] left-[77px] opacity-65 rounded-[6.929px] top-[881px] w-[220px]" />
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[14px] leading-[normal] left-[96px] not-italic text-[12px] text-black top-[891px] w-[194px]">
         {best[0]
-          ? `${formatLocalTimeFull(best[0].departDt, tzOffset)} Departure - ${formatLocalTimeFull(best[0].arriveDt, tzOffset)} Arrival`
+          ? `${formatLocalTimeFull(best[0].departDt, tzOffset)} Departure`
           : "No ideal window found"}
       </p>
       {best[0] && (
@@ -748,12 +888,12 @@ function CommuteTimes({
         />
       )}
 
-      {/* Row 2 */}
+      {/* Row 2: The second best window */}
       <div className="absolute bg-[#eee] h-[34.51px] left-[77px] opacity-65 rounded-[6.929px] top-[933px] w-[220px]" />
         
       <p className="absolute font-['Inter:Regular',sans-serif] font-normal h-[14px] leading-[normal] left-[96px] not-italic text-[12px] text-black top-[943px] w-[198px]">
         {best[1]
-          ? `${formatLocalTimeFull(best[1].departDt, tzOffset)} Departure - ${formatLocalTimeFull(best[1].arriveDt, tzOffset)} Arrival`
+          ? `${formatLocalTimeFull(best[1].departDt, tzOffset)} Departure`
           : "No second window found"}
       </p>
       {best[1] && (
@@ -768,7 +908,20 @@ function CommuteTimes({
 }
 
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// Main Component 
+
+/**
+ * Weather Details which is the default export 
+ * 
+ * Both API's are fired in parallel so current weather and forecast arrive together 
+ * 
+ * Errors are labeled as the city not found error and the rest of the errors, both are handled with graceful messages
+ * 
+ * The rain information comes from the first hourly forecast rather than the current weather, as it is more powerful and better for cycling descisions
+ * 
+ * displayCity prefers the API resolved name, not the URL
+ * 
+ */
 
 export default function WeatherDetails() {
   const { city } = useParams<{ city: string }>();
@@ -783,6 +936,8 @@ export default function WeatherDetails() {
   useEffect(() => {
     if (!city) { navigate("/"); return; }
     const decoded = decodeURIComponent(city);
+
+    // Both requests are fired
     Promise.all([getWeatherData(decoded), getHourlyForecast(decoded)])
       .then(([weatherData, forecastResult]) => {
         setWeather(weatherData);
@@ -791,7 +946,7 @@ export default function WeatherDetails() {
         setLoading(false);
       })
       .catch((err) => {
-        // Check if it's a 404 / city not found error
+        // Check if it's a 404/city not found error
         const msg = err.message?.toLowerCase() ?? "";
         if (msg.includes("404") || msg.includes("not found") || msg.includes("city not found")) {
           setError(`City "${decoded}" not found. Please check the spelling and try again.`);
@@ -802,6 +957,7 @@ export default function WeatherDetails() {
       });
   }, [city]);
 
+  // City input is needed, check again for safety 
   if (!city) return null;
 
   if (loading) {
@@ -833,6 +989,7 @@ export default function WeatherDetails() {
     );
   }
 
+  // Use API's city name
   const displayCity =
     weather.name ||
     decodeURIComponent(city)
@@ -842,6 +999,8 @@ export default function WeatherDetails() {
 
   const toggleUnit = () => setUnit(unit === "C" ? "F" : "C");
   const { score, label } = getCyclingScore(weather);
+
+  // First forecast slot gives the rain information and probability for volume and precipitiation 
   const firstSlot = forecast[0];
   const rainMm = firstSlot?.rain?.["1h"] ?? 0;
   const rainPop = firstSlot?.pop ?? 0; 
@@ -851,10 +1010,9 @@ export default function WeatherDetails() {
     <div
       className="bg-[#f3f3f3] min-h-screen flex justify-center overflow-x-hidden overflow-y-auto"
       data-name="iPhone 17 - 1"
-    >
+    > {/* Fixed Width */}
       <div className="relative min-h-[1200px] w-[400px] flex-shrink-0 bg-white overflow-hidden">
 
-        {/* Hourly forecast — height is dynamic so label is placed just above it */}
         <HourlyForecast unit={unit} forecast={forecast} tzOffset={tzOffset} />
 
         <HazardWarning 
@@ -882,7 +1040,8 @@ export default function WeatherDetails() {
         <Location city={displayCity} unit={unit} onToggleUnit={toggleUnit} />
         <SuitabilityScore score={score} label={label} />
         <CommuteTimes forecast={forecast} tzOffset={tzOffset} />
-
+        
+         {/* Decorative icon for visuals only */}
         <div className="absolute left-[210px] size-[60px] top-[377px]">
           <img
             alt=""
