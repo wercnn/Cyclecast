@@ -1,23 +1,35 @@
+/** API layer for OpenWeatherMap integration
+ * 
+ * API key is safely pulled from the .env file.
+ * 
+ * Grabs current weather data via the free open weather map endpoint
+ * Grabs hourly forecasts data via the pro open weather map endpoint
+ * 
+ * All temperatures are returned in Celsius 
+ * Wind speed is returned in m/s by the API and is converted using msToKmh() before display
+  */
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
 const BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
-const HOURLY_URL = "https://pro.openweathermap.org/data/2.5/forecast/hourly";
+const HOURLY_URL = "https://pro.openweathermap.org/data/2.5/forecast/hourly"; // Requires a pro API key
 
-// OpenWeather wind.speed is always m/s regardless of units param.
-// 1 m/s = 3.6 km/h exactly.
+// Converts wind speed from meters per second to kilometers per hour
+// 1 m/s = 3.6 km/h
 export function msToKmh(ms: number): number {
   return Math.round(ms * 3.6);
 }
 
-// Format a UTC unix timestamp into the city's local hour label e.g. "3pm", "12am"
-// tzOffset is the city's UTC offset in seconds (from API response city.timezone)
+// The API returns all timestamps as UTC unix seconds 
+// Cities have a timezone field which is their UTC offset in seconds
+// To display the times in the city's local time, the offset is applied manually
+// This is so the city's local timezone not the browsers
 export function formatLocalHour(dt: number, tzOffset: number): string {
-  const date = new Date((dt + tzOffset) * 1000);
+  const date = new Date((dt + tzOffset) * 1000); // The pattern used
   const hours = date.getUTCHours().toString().padStart(2, "0");
   const minutes = date.getUTCMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
 }
 
-// Format a UTC unix timestamp into city local HH:MM e.g. "09:00"
+// Formats a UTC unix timestamp as a full HH:MM, for example "09:00", time string in the city's local time
 export function formatLocalTimeFull(dt: number, tzOffset: number): string {
   const localDate = new Date((dt + tzOffset) * 1000);
   const h = String(localDate.getUTCHours()).padStart(2, "0");
@@ -25,39 +37,44 @@ export function formatLocalTimeFull(dt: number, tzOffset: number): string {
   return `${h}:${m}`;
 }
 
-// Get the city-local date string for grouping by day
+// Returns a YYYY-MM-DD date string of the city's local calender date
 export function localDateString(dt: number, tzOffset: number): string {
   const localDate = new Date((dt + tzOffset) * 1000);
-  // Returns e.g. "2026-03-17" — stable key for grouping
   const y = localDate.getUTCFullYear();
   const mo = String(localDate.getUTCMonth() + 1).padStart(2, "0");
   const d = String(localDate.getUTCDate()).padStart(2, "0");
   return `${y}-${mo}-${d}`;
 }
 
+// The weather response format from the free weather endpoint
+// This only has the features CycleCast uses, not the full API response
 export interface WeatherData {
-  main: { temp: number; humidity: number; feels_like: number };
-  weather: Array<{ description: string; icon: string; main: string }>;
-  wind: { speed: number; deg: number }; // always m/s
-  rain?: { "1h"?: number };
-  coord: { lat: number; lon: number };
-  name: string;
+  main: { temp: number; humidity: number; feels_like: number }; // Temperature and humidity 
+  weather: Array<{ description: string; icon: string; main: string }>; // Weather icon and description
+  wind: { speed: number; deg: number }; // Wind, in m/s as stated
+  rain?: { "1h"?: number }; // Rainfall volume in the past hour
+  coord: { lat: number; lon: number }; // Latitude of the city. longitude of the city 
+  name: string; // City name
 }
 
+// An hourly slot from the pro hourly forecast endpoint
+// Each slot is for an hour
 export interface HourlyForecastItem {
-  dt: number;
+  dt: number; // UTC unix timestep for this hour
   main: { temp: number };
   weather: Array<{ main: string; icon: string }>;
-  wind: { speed: number; deg: number }; // always m/s
+  wind: { speed: number; deg: number }; 
   rain?: { "1h"?: number };
-  pop: number; // probability of precipitation 0–1
+  pop: number; 
 }
 
+//  The filtered forecast slots get bundled with the city's timezone
 export interface ForecastResult {
-  slots: HourlyForecastItem[];
-  tzOffset: number; // city UTC offset in seconds
+  slots: HourlyForecastItem[]; // Hourly forecast slots 
+  tzOffset: number; // City's UTC offset in seconds
 }
 
+// Grabs current weather conditions for a city by name
 export const getWeatherData = async (city: string): Promise<WeatherData> => {
   const response = await fetch(
     `${BASE_URL}?q=${city}&appid=${API_KEY}&units=metric`
@@ -68,6 +85,8 @@ export const getWeatherData = async (city: string): Promise<WeatherData> => {
   return response.json();
 };
 
+// Grabs up to 96 hours of hourly forecast data for a city
+// Only includes future slots
 export const getHourlyForecast = async (city: string): Promise<ForecastResult> => {
   const response = await fetch(
     `${HOURLY_URL}?q=${city}&appid=${API_KEY}&units=metric&cnt=96`
@@ -77,10 +96,8 @@ export const getHourlyForecast = async (city: string): Promise<ForecastResult> =
   }
   const data = await response.json();
 
-  // city.timezone is the UTC offset in seconds for the searched city
   const tzOffset: number = data.city.timezone;
 
-  // Strip slots already in the past (compare against city local now)
   const nowSeconds = Math.floor(Date.now() / 1000);
   const slots: HourlyForecastItem[] = data.list.filter(
     (item: HourlyForecastItem) => item.dt >= nowSeconds
