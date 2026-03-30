@@ -8,11 +8,9 @@ CycleCast is a cycling-focused weather web app designed for university students 
 
 ## 📸 Screenshots / Demo
 
-> _Add your screenshots here. Drag and drop images directly into GitHub's README editor to upload them._
-
 | Home Screen | Dashboard |
 |---|---|
-| ![Home](./public/screenshots/home.png) | ![Dashboard](./public/screenshots/dashboard.png) |
+| ![Home](<img width="1438" height="744" alt="homepage" src="https://github.com/user-attachments/assets/e4dae9f0-6e8e-4d66-b4eb-15ff5776e77b" />)| ![Dashboard](<img width="196" height="621" alt="dashboard" src="https://github.com/user-attachments/assets/a6be8ff9-af47-49c5-a398-e3f6a1bd4ef0" />) |
 
 ---
 
@@ -53,7 +51,7 @@ Weather data is powered by the [OpenWeather API](https://openweathermap.org/api)
 
 - [Node.js](https://nodejs.org/) v18 or higher
 - [npm](https://www.npmjs.com/) or [pnpm](https://pnpm.io/)
-- A free [OpenWeather API key](https://home.openweathermap.org/users/sign_up)
+- - An [OpenWeather API key](https://home.openweathermap.org/users/sign_up) — **Student plan or above required** for the 4-day hourly forecast endpoint (`/forecast`). The free tier only provides a 3-hour step 5-day forecast and will not support all features.
 
 ### Steps
 
