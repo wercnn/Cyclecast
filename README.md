@@ -112,6 +112,6 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 🙏 Acknowledgements
 
-- Designed on [Figma community](https://www.figma.com/design/TVeTFoKarshehUeogMQYjB/Implement-weather-app-homepage) and created UI compenents with Figma Make 
+- Designed on Figma and created UI compenents with Figma Make 
 - Weather data powered by [OpenWeather](https://openweathermap.org/)
 - ECS522U GUI Programming — Queen Mary University of London
